@@ -24,7 +24,7 @@
     <div class="screen active" id="scrMenu" style="justify-content: center;">
         <div class="brand-header" style="text-align: center; margin-bottom: 30px;">
             <div class="brand-title" style="font-size: 24px;">INSIGHT</div>
-            <div class="brand-subtitle">Party Game Engine</div>
+            <div class="brand-subtitle">Party Game </div>
         </div>
         <input type="text" class="input-field" id="menuNameInput" placeholder="Your Nickname" maxlength="12">
         <button class="btn-main" onclick="createLiveRoom()">Host New Game</button>
@@ -83,7 +83,7 @@
                     <div class="deck-icon icon-pepper"></div>
                     <div class="deck-title">Spicy</div><div class="deck-subtitle">Hot takes</div>
                 </div>
-                <div class="deck-pill" onclick="setCategory('drain', this)">
+                <div class="deck-pill" onclick="setCategory('deep', this)">
                     <div class="deck-icon icon-brain"></div>
                     <div class="deck-title">Deep</div><div class="deck-subtitle">Get real</div>
                 </div>
@@ -169,7 +169,6 @@
         <div class="brand-subtitle" id="revealInstructions" style="text-align:center;">...</div>
         <div class="prompt-box"><div class="prompt-text" id="revealPromptLabel">...</div></div>
         
-        <!-- THIS IS THE ONLY LINE THAT CHANGED. We added the 'fanned-hand' class -->
         <div class="cards-stack fanned-hand" id="cardsWrapper">
         </div>
         <button class="btn-main" id="nextRoundBtn" style="display:none;">Next Round</button>
@@ -188,16 +187,66 @@
     </div>
 </div>
 
-<script src="game.js"></script>
 <div class="modal-overlay" id="confirmNSFWModal">
     <div class="modal-card">
-        <div class="modal-titl>The NSFW category contains extreme and sensitive content. Are you sure you want to proceed?</div>
+        <div class="modal-title">18+ Content Warning</div>
+        <div class="modal-desc">The NSFW category contains extreme and sensitive content. Are you sure you want to proceed?</div>
         <div class="modal-actions">
             <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
             <button class="btn-main" onclick="acceptNSFWConfirmation()">Proceed</button>
         </div>
-    </div>e">18+ Content Warning</div>
-        <div class="modal-desc"
+    </div>
 </div>
+
+<script src="game.js"></script>
+<script src="coinMode.js"></script>
+
+<!-- FIDGET TOYS JAVASCRIPT INJECTION -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Clicker Button Logic
+        const clk = document.getElementById('toyClicker');
+        if (clk) {
+            clk.onclick = () => {
+                const n = parseInt(clk.innerText) + 1;
+                clk.innerText = n;
+                if (typeof Sound !== 'undefined' && Sound.play) {
+                    Sound.play(400 + (n % 10) * 20, 'triangle', 0.05);
+                }
+            };
+        }
+
+        // 2. Switch Toggle Logic
+        const tgl = document.getElementById('toyToggle');
+        if (tgl) {
+            tgl.onclick = () => {
+                tgl.classList.toggle('on');
+                if (typeof Sound !== 'undefined' && Sound.play) {
+                    Sound.play(150, 'sine', 0.05);
+                }
+            };
+        }
+
+        // 3. Bubble Pop Logic
+        const bGrid = document.getElementById('toyBubbleGrid');
+        if (bGrid) {
+            bGrid.innerHTML = "";
+            for (let i = 0; i < 8; i++) {
+                const b = document.createElement('div');
+                b.className = "bubble";
+                b.onclick = () => {
+                    if (!b.classList.contains('popped')) {
+                        b.classList.add('popped');
+                        if (typeof Sound !== 'undefined' && Sound.play) {
+                            Sound.play(600, 'sine', 0.02);
+                        }
+                        setTimeout(() => b.classList.remove('popped'), 3000);
+                    }
+                };
+                bGrid.appendChild(b);
+            }
+        }
+    });
+</script>
 </body>
 </html>

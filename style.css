@@ -357,3 +357,173 @@ html, body {
 .scrollable { 
     clip-path: inset(0 round 12px); 
 }
+/* ── COIN MODE INJECTED STYLES ── */
+.pill-container {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.matrix-pill {
+    flex: 1;
+    padding: 25px 15px;
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.matrix-pill.red {
+    border-color: rgba(255, 0, 85, 0.5);
+    box-shadow: 0 0 15px rgba(255, 0, 85, 0.2);
+}
+
+.matrix-pill.red:active {
+    transform: scale(0.95);
+    background: rgba(255, 0, 85, 0.2);
+}
+
+.matrix-pill.blue {
+    border-color: rgba(0, 240, 255, 0.5);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+}
+
+.matrix-pill.blue:active {
+    transform: scale(0.95);
+    background: rgba(0, 240, 255, 0.2);
+}
+
+.matrix-pill .pill-title { font-size: 18px; font-weight: 800; }
+.matrix-pill.red .pill-title { color: var(--neon-pink, #ff0055); }
+.matrix-pill.blue .pill-title { color: var(--neon-cyan, #00f0ff); }
+
+.matrix-pill .pill-sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.coin-stage {
+    perspective: 1000px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px 0;
+    width: 100%;
+    height: 180px;
+}
+
+.neon-coin {
+    width: 140px;
+    height: 140px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 3s cubic-bezier(0.15, 0.85, 0.35, 1.15);
+    cursor: pointer;
+}
+
+.coin-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 20px;
+    background: rgba(15, 7, 32, 0.9);
+    border: 3px solid var(--neon-pink, #ff0055);
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+    color: #fff;
+}
+
+.coin-front { transform: rotateY(0deg); color: var(--neon-pink, #ff0055); }
+.coin-back {
+    transform: rotateY(180deg);
+    border-color: var(--neon-cyan, #00f0ff);
+    color: var(--neon-cyan, #00f0ff);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+}
+
+.neon-coin.edge-landing {
+    animation: edgePulse 1s infinite alternate;
+}
+
+@keyframes edgePulse {
+    0% { box-shadow: 0 0 20px #ffd700, 0 0 40px #ff0055; }
+    100% { box-shadow: 0 0 40px #00ff66, 0 0 70px #ffd700; }
+}
+
+.coin-outcome-banner {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 900;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.coin-outcome-banner.safe {
+    color: #00ff66;
+    background: rgba(0, 255, 102, 0.1);
+    border: 1px solid #00ff66;
+}
+
+.coin-outcome-banner.busted {
+    color: #ff0055;
+    background: rgba(255, 0, 85, 0.1);
+    border: 1px solid #ff0055;
+}
+
+.coin-outcome-banner.golden {
+    color: #ffd700;
+    background: rgba(255, 215, 0, 0.15);
+    border: 1px solid #ffd700;
+}
+
+.coin-target-pill.selected {
+    border-color: #00ff66 !important;
+    background: rgba(0, 255, 102, 0.15) !important;
+}
+/* ================= COIN MODE: HOST CONTROLS TOGGLE ================= */
+/* Used by CoinMode.setGameMode() to hide classic deck/round pickers while
+   Coin Mode is selected, without touching each child's inline display
+   style (which was the source of leftover blank/black overlay blocks). */
+#hostOnlyControls.coin-mode-active > *:not(#modeSelectionContainer) {
+    display: none !important;
+}
+
+/* ================= COIN MODE: FIDGET LAYOUT ================= */
+/* Reuses the shared .fidget-board / .clicker-btn / .switch-track /
+   .bubble-grid rules defined above; only lays out Coin Mode's 3-toy
+   variant (clicker + switch + a wide bubble grid) across mobile/desktop. */
+.coin-fidget-board {
+    grid-template-columns: 1fr 1fr;
+}
+.coin-fidget-toy-wide {
+    grid-column: span 2;
+}
+.coin-fidget-board .bubble-grid {
+    width: 100%;
+}
+
+@media (min-width: 480px) {
+    .coin-fidget-board {
+        grid-template-columns: 1fr 1fr 1.4fr;
+    }
+    .coin-fidget-toy-wide {
+        grid-column: auto;
+    }
+}
