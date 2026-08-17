@@ -92,6 +92,11 @@ html, body {
 }
 .btn-secondary:active { background: rgba(255,255,255,0.05); }
 
+/* Coin Mode round-limit pills (10/20/30) — mirrors .btn-cat's cyan active
+   state, kept separate from .round-pill's pink so Coin Mode's own controls
+   stay visually distinct from classic mode's round-length picker. */
+.btn-coin-round.active { border-color: var(--neon-cyan, #00f0ff); background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan, #00f0ff); }
+
 /* Headers */
 .lobby-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .brand-title { color: var(--text-primary); font-size: 16px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; text-align: center; width: 100%; }
@@ -217,39 +222,77 @@ html, body {
     max-height: none; 
 }
 #nextRoundBtn {
-    margin: 0 auto;
+    margin: 24px auto 0 auto;
     display: block;
     flex-shrink: 0;
 }
 
-/* --- 3D TWO-PILE ENGINE --- */
+/* --- UNO-STYLE TWO-PILE CARD HAND --- */
 #cardsWrapper { 
     display: flex; 
-    justify-content: center; 
-    align-items: center; 
-    height: 260px; 
-    margin: 20px 0; 
+    justify-content: center;
+    align-items: flex-end;
+    height: 200px; 
+    margin: 0 0 10px 0; 
     position: relative; 
-    overflow: visible; /* Removes scrollbar */
+    overflow: visible;
+    padding: 0 60px;
+    gap: 20px;
+    transform: translateY(-40px);
 }
 
-.fanned-hand { perspective: 1200px; }
+/* Left Pile: Revealed Cards */
+#cardsWrapper::before {
+    content: attr(data-revealed-label);
+    position: absolute;
+    left: 12px;
+    top: -24px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+/* Right Pile: Unrevealed Cards */
+#cardsWrapper::after {
+    content: attr(data-unrevealed-label);
+    position: absolute;
+    right: 12px;
+    top: -24px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.fanned-hand { 
+    perspective: 1200px;
+    position: relative;
+    height: 100%;
+}
 
 .reveal-card-scene { 
     position: absolute; 
-    width: 130px; 
-    height: 190px; 
+    width: 110px; 
+    height: 135px;
+    bottom: 0;
+    cursor: pointer;
+    z-index: 10;
     
-    /* Pushing further left (-100px) and further right (100px) */
-    transform: translateX(-100px) translateY(0px) rotate(0deg); 
-    z-index: calc(var(--total) - var(--i)); 
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-    cursor: pointer; 
+    /* Smooth transition for position and rotation */
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                box-shadow 0.3s ease;
+    
+    /* Default: unrevealed, positioned on the right (starting position) */
+    /* Will be overridden by inline styles from JavaScript */
 }
 
 .reveal-card-scene.is-flipped { 
-    transform: translateX(100px) translateY(0px) rotate(0deg); 
-    z-index: calc(100 + var(--i)); 
+    /* When flipped, move to the left side but preserve the rotation from right pile */
+    /* Positioning is calculated dynamically in JavaScript for proper stacking */
+    z-index: 20;
 }
 /* 3D Flip Mechanics */
 .reveal-card-inner { 
@@ -266,44 +309,173 @@ html, body {
 .reveal-card-face { 
     position: absolute; 
     width: 100%; 
-    height: 190px; /* Force consistent height */
+    height: 180px;
     backface-visibility: hidden; 
     border-radius: 12px; 
     display: flex; 
     flex-direction: column; 
     justify-content: center; 
     align-items: center; 
-    padding: 14px; 
-    border: 1px solid rgba(255,255,255,0.1); 
-    background: #140f1e; /* SOLID COLOR - No transparency */
-    opacity: 1 !important; /* Force opacity */
+    padding: 12px; 
+    border: 1px solid rgba(255,255,255,0.15); 
+    background: #140f1e;
+    opacity: 1 !important;
+    
+    /* Physical card shadow */
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+    
+    /* Subtle depth */
+    transform-style: preserve-3d;
 }
-.reveal-card-front { background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); color: white; }
-.reveal-card-front::after { content: "INSIGHT"; font-size: 22px; font-weight: 900; letter-spacing: 2px; transform: rotate(-45deg); }
+
+.reveal-card-scene:hover .reveal-card-face {
+    /* Stronger shadow on hover */
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.reveal-card-front { 
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); 
+    color: white;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+.reveal-card-front::after { 
+    content: "INSIGHT"; 
+    font-size: 20px; 
+    font-weight: 900; 
+    letter-spacing: 2px; 
+    transform: rotate(-45deg); 
+}
+
 .reveal-card-back {
     transform: rotateY(180deg);
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
-    
-    /* FIXES THE OVERFLOW */
-    word-break: break-word; /* Forces long words to wrap */
-    overflow-y: auto;       /* Adds a tiny scroll if the text is too long */
-    padding: 15px;          /* Keeps text away from the edges */
+    word-break: break-word;
+    overflow-y: auto;
+    padding: 12px;
     text-align: center;
-    justify-content: center; /* Centers vertically */
+    justify-content: center;
+    background: #140f1e;
 }
+
 /* Force the Winner card to be opaque and solid */
 .reveal-card-scene.selected .reveal-card-back {
     background: #140f1e !important; 
     border: 2px solid var(--neon-green) !important;
-    box-shadow: 0 0 40px rgba(0, 255, 166, 0.4);
+    box-shadow: 0 0 50px rgba(0, 255, 166, 0.6),
+                0 8px 20px rgba(0, 255, 166, 0.3) !important;
     opacity: 1 !important;
     z-index: 1000 !important;
+    transform: rotateY(180deg) scale(1.08);
 }
 
-.author-reveal { margin-top: 10px; font-size: 10px; color: var(--neon-green); font-weight: 700; text-transform: uppercase; }
-.fav-btn { background: var(--neon-green); color: #000; border: none; border-radius: 20px; padding: 8px 14px; font-size: 11px; font-weight: 800; cursor: pointer; margin-top: 12px; }
+.author-reveal { 
+    margin-top: 8px; 
+    font-size: 9px; 
+    color: var(--neon-green); 
+    font-weight: 700; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fav-btn { 
+    background: var(--neon-green); 
+    color: #000; 
+    border: none; 
+    border-radius: 18px; 
+    padding: 7px 12px; 
+    font-size: 10px; 
+    font-weight: 800; 
+    cursor: pointer; 
+    margin-top: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 255, 166, 0.25);
+}
+
+.fav-btn:hover {
+    background: #00ff9f;
+    box-shadow: 0 6px 16px rgba(0, 255, 166, 0.4);
+    transform: scale(1.05);
+}
+
+.fav-btn:active {
+    transform: scale(0.98);
+}
+
+/* RESPONSIVE DESIGN FOR MOBILE */
+@media (max-width: 500px) {
+    #cardsWrapper { 
+        height: 180px;
+        gap: 10px;
+        padding: 0 40px;
+        transform: translateY(-30px);
+    }
+
+    .reveal-card-scene { 
+        width: 95px;
+        height: 120px;
+    }
+
+    .reveal-card-face {
+        height: 160px;
+        padding: 10px;
+        font-size: 12px;
+        border-radius: 10px;
+    }
+
+    .reveal-card-front::after {
+        font-size: 18px;
+    }
+
+    .reveal-card-back {
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    .fav-btn {
+        padding: 6px 10px;
+        font-size: 9px;
+    }
+
+    .author-reveal {
+        font-size: 8px;
+        margin-top: 6px;
+    }
+}
+
+@media (max-width: 380px) {
+    #cardsWrapper { 
+        height: 160px;
+        gap: 8px;
+        padding: 0 30px;
+        transform: translateY(-20px);
+    }
+
+    .reveal-card-scene { 
+        width: 85px;
+        height: 105px;
+    }
+
+    .reveal-card-face {
+        height: 145px;
+        padding: 8px;
+    }
+
+    .reveal-card-front::after {
+        font-size: 16px;
+        letter-spacing: 1px;
+    }
+
+    .reveal-card-back {
+        font-size: 11px;
+        padding: 8px;
+    }
+}
 
 /* SCOREBOARD */
 .scoreboard { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-top: 10px; }

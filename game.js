@@ -84,6 +84,7 @@ fetch('questions.json')
 let net  = { peer: null, conn: null, connections: [], role: 'client', myName: '' };
 let room = {
     id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
+    gameMode: 'classic',
     cards:[], timeLimit:45, playedQuestions:[],
     scores: {},          
     subjectCounts: {},    
@@ -113,6 +114,10 @@ function resetLobbyDefaultsUI() {
     document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
     const tenRoundsPill = $('roundPill10');
     if (tenRoundsPill) tenRoundsPill.classList.add('active');
+
+    if (typeof CoinMode !== 'undefined' && CoinMode.setGameMode) {
+        CoinMode.setGameMode('classic');
+    }
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────────
@@ -203,6 +208,7 @@ function leaveRoom() {
     net = { peer: null, conn: null, connections: [], role: 'client', myName: '' };
     room = {
         id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
+        gameMode: 'classic',
         cards:[], timeLimit:45, playedQuestions:[],
         scores: {}, subjectCounts: {}, lateJoiners: [], maxRounds: 10, roundCount: 0, roundActive: false, activeWriters: []
     };
@@ -222,7 +228,7 @@ function addTestBots() {
     ['bot1', 'bot2', 'bot3'].forEach(bot => {
         if (!room.players.includes(bot)) room.players.push(bot);
     });
-    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, playedQuestions: room.playedQuestions });
+    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, playedQuestions: room.playedQuestions });
     updateLobbyUI();
     Sound.play(500, 'sine', 0.1);
     Vibrate.tap();
@@ -381,6 +387,7 @@ function handleData(data, connection) {
                 type: 'SYNC_LOBBY',
                 players: room.players,
                 category: room.currentCategory,
+                gameMode: room.gameMode,
                 playedQuestions: room.playedQuestions,
                 maxRounds: room.maxRounds,
                 roundCount: room.roundCount,
@@ -393,6 +400,7 @@ function handleData(data, connection) {
     else if (data.type === 'SYNC_LOBBY') {
         room.players = data.players;
         room.currentCategory = data.category;
+        if (data.gameMode) room.gameMode = data.gameMode;
         room.playedQuestions = data.playedQuestions || [];
         if (data.maxRounds !== undefined) room.maxRounds = data.maxRounds;
         if (data.roundCount !== undefined) room.roundCount = data.roundCount;
@@ -450,14 +458,17 @@ function handleData(data, connection) {
     }
     else if (data.type === 'FLIP_CARD') {
         room.cards[data.index].revealed = true;
+        room.cards[data.index].revealedAt = Date.now();
         updateCardDOM(data.index);
+        recalculateUnrevealedHandPositions();
         if (net.role === 'host' && connection) {
-            try { connection.send(data); } catch(e){} // Simple relay fix
+            try { connection.send(data); } catch(e){}
         }
     }
     else if (data.type === 'UNFLIP_CARD') {
         room.cards[data.index].revealed = false;
         updateCardDOM(data.index);
+        recalculateUnrevealedHandPositions();
         if (net.role === 'host' && connection) {
             try { connection.send(data); } catch(e){} 
         }
@@ -465,18 +476,19 @@ function handleData(data, connection) {
     else if (data.type === 'SELECT_CARD') {
         room.cards.forEach((c,i) => c.selected = (i === data.index));
         room.cards.forEach((_,i) => updateCardDOM(i));
+        recalculateUnrevealedHandPositions();
 
         if (net.role === 'host') {
             const winner = room.cards[data.index].creator;
-            if (!winner.startsWith('bot')) {   
-                room.scores[winner] = (room.scores[winner] || 0) + 1;
-            } else {
-                room.scores[winner] = (room.scores[winner] || 0) + 1;
-            }
+            room.scores[winner] = (room.scores[winner] || 0) + 1;
             broadcastToAll({ type: 'SYNC_SCORES', scores: room.scores });
             if (connection) {
                 try { connection.send(data); } catch(e){} 
             }
+        }
+        
+        if ($('scrRevealStage').classList.contains('active')) {
+            updateNextRoundButtonState();
         }
     }
     else if (data.type === 'SYNC_SCORES') {
@@ -512,13 +524,13 @@ function handleData(data, connection) {
         room.roundActive     = true;
 
         $('revealPromptLabel').innerText  = room.currentPrompt;
-        $('revealInstructions').innerText = `You joined mid-round — sit tight for the next one!`;
+        $('revealInstructions').innerText = `You joined mid-round - sit tight for the next one!`;
         $('nextRoundBtn').style.display   = 'none';
 
         const container = $('cardsWrapper');
         container.innerHTML = `
             <div class="late-join-notice">
-                ⏳ Round in progress...<br>
+                Round in progress...<br>
                 <span>You'll be a full player starting next round.</span>
             </div>
         `;
@@ -529,7 +541,7 @@ function handleData(data, connection) {
         room.lateJoiners = data.lateJoiners || room.lateJoiners;
         room.scores     = data.scores || room.scores;
         if (!room.lateJoiners.includes(data.name)) room.lateJoiners.push(data.name);
-        showToast(`📲 ${data.name} joined the game!`);
+        showToast(`${data.name} joined the game!`);
         Vibrate.tap();
     }
 }
@@ -566,8 +578,8 @@ function updateLobbyUI() {
     const lbl    = $('lobbyStatusLabel');
     if (lbl) {
         lbl.innerText = needed > 0
-            ? `${count} / 3 players — need ${needed} more`
-            : `${count} players — ready!`;
+            ? `${count} / 3 players - need ${needed} more`
+            : `${count} players - ready!`;
         lbl.className = needed > 0 ? 'lobby-status' : 'lobby-status ready';
     }
 
@@ -594,6 +606,11 @@ function kickPlayer(name) {
 // ── ROUND FLOW ─────────────────────────────────────────────────────────────────
 function broadcastStartRound() {
     if (room.players.length < 3) { alert("Need at least 3 players!"); return; }
+
+    if (room.gameMode === 'coin') {
+        CoinMode.startRound();
+        return;
+    }
 
     room.subjectCounts = room.subjectCounts || {};
 
@@ -694,7 +711,7 @@ function startRoundExecution() {
         setupFidgets();
         showScreen('scrSubjectLounge');
     } else {
-        $('writerCategoryLabel').innerText = room.currentCategory.toUpperCase();
+        $('writerCategoryLabel').innerText = (room.currentCategory === 'classic' ? 'party' : room.currentCategory).toUpperCase();
         $('activePromptLabel').innerText   = room.currentPrompt;
         showScreen('scrWriterInput');
     }
@@ -706,7 +723,7 @@ function submitWriterCard() {
     if (!txt) return;
 
     $('lockInBtn').disabled  = true;
-    $('lockInBtn').innerText = "Locked ✓";
+    $('lockInBtn').innerText = "Locked";
 
     const payload = { type: 'SUBMIT_CARD', text: txt, creator: net.myName };
     if (net.role === 'host') handleData(payload, null);
@@ -730,6 +747,7 @@ function renderRevealStage() {
     const gameOver = outOfPrompts || roundLimitReached;
 
     let nextBtn = $('nextRoundBtn');
+    const winnerSelected = room.cards.some(card => card.selected);
 
     if (gameOver) {
         if (isHost) {
@@ -743,56 +761,7 @@ function renderRevealStage() {
             nextBtn.style.display = "none";
         }
     } else {
-        if (isHost || isMeSubject) {
-            nextBtn.style.display = "block";
-            nextBtn.disabled = false;
-            
-            let nextText = room.maxRounds === 'unlimited' 
-                ? `Next Round (${room.roundCount})` 
-                : `Next Round (${room.roundCount}/${room.maxRounds})`;
-
-            if (isHost && !isMeSubject) {
-                nextBtn.disabled = true;
-                let secs = 10;
-                nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
-                
-                window.hostWaitInterval = setInterval(() => {
-                    if (!$('scrRevealStage').classList.contains('active')) {
-                        clearInterval(window.hostWaitInterval);
-                        return;
-                    }
-                    secs--;
-                    if (secs > 0) {
-                        nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
-                    } else {
-                        clearInterval(window.hostWaitInterval);
-                        nextBtn.disabled = false;
-                        nextBtn.innerText = nextText;
-                    }
-                }, 1000);
-
-                nextBtn.onclick = () => {
-                    clearInterval(window.hostWaitInterval);
-                    nextBtn.disabled = true;
-                    broadcastStartRound();
-                };
-            } else if (isHost && isMeSubject) {
-                nextBtn.innerText = nextText;
-                nextBtn.onclick = () => {
-                    nextBtn.disabled = true;
-                    broadcastStartRound();
-                };
-            } else if (isMeSubject && !isHost) {
-                nextBtn.innerText = nextText;
-                nextBtn.onclick = () => {
-                    nextBtn.disabled = true;
-                    nextBtn.innerText = "Starting...";
-                    net.conn.send({ type: 'REQUEST_NEXT_ROUND' });
-                };
-            }
-        } else {
-            nextBtn.style.display = "none";
-        }
+        updateNextRoundButtonState();
     }
 
     $('revealInstructions').innerText = isMeSubject
@@ -810,6 +779,23 @@ function renderRevealStage() {
         
         el.style.setProperty('--i', idx);
         el.style.setProperty('--total', room.cards.length);
+
+        const totalCards = room.cards.length;
+        const cardWidth = 110;
+        const overlapPercent = 0.50;
+        const cardSpacing = cardWidth * (1 - overlapPercent);
+        
+        const posX = idx * cardSpacing + 20;
+        
+        const centerIdx = (totalCards - 1) / 2;
+        const distFromCenter = idx - centerIdx;
+        const maxRotation = 12;
+        const rotation = (distFromCenter / Math.max(1, centerIdx)) * maxRotation;
+        
+        const verticalOffsetPercent = Math.abs(distFromCenter) / Math.max(1, centerIdx);
+        const posY = verticalOffsetPercent * 16;
+        
+        el.style.transform = `translateX(${posX}px) translateY(${posY}px) rotateZ(${rotation}deg)`;
         
         el.innerHTML = `
             <div class="reveal-card-inner">
@@ -826,9 +812,8 @@ function renderRevealStage() {
 
         el.onclick = (e) => {
             if (!isMeSubject) return;
-            if (Date.now() - screenTransitionChangeTime < 1500) return; 
+            if (Date.now() - screenTransitionChangeTime < 1500) return;
             
-            // 1. Did they click the WINNER favourite button?
             if (e.target.classList.contains('fav-btn')) {
                 if (!room.cards.some(card => card.selected) && room.cards[idx].revealed) {
                     if (Date.now() - (room.cards[idx].revealedAt || 0) < 1200) return; 
@@ -845,9 +830,7 @@ function renderRevealStage() {
                 return; 
             }
 
-            // 2. Sequential Deck Logic
             if (!room.cards[idx].revealed) {
-                // If they tap ANY hidden card, force flip the TOP hidden card in the deck sequence
                 const topHiddenIdx = room.cards.findIndex(c => !c.revealed);
                 
                 if (topHiddenIdx !== -1) {
@@ -864,7 +847,6 @@ function renderRevealStage() {
                     }
                 }
             } else if (!room.cards.some(card => card.selected)) {
-                // If they click ANY revealed card, unflip the TOP revealed card back to the hidden pile
                 const topRevealedIdx = room.cards.map(c => c.revealed).lastIndexOf(true);
                 
                 if (topRevealedIdx !== -1) {
@@ -923,12 +905,21 @@ function updateCardDOM(idx) {
     if (c.selected) {
         el.classList.add('selected', 'is-flipped');
         textEl.innerText = c.text;
-        authorEl.innerHTML = `👑 Written by: ${c.creator}`;
+        authorEl.innerHTML = `Written by: ${c.creator}`;
         authorEl.style.display = 'block';
         favBtn.style.display = 'none';
     } else if (c.revealed) {
         el.classList.add('is-flipped');
         textEl.innerText = c.text;
+        
+        const revealedIndex = room.cards.slice(0, idx).filter(card => card.revealed).length;
+        
+        const revealedOffsetX = -140 - (revealedIndex * 6);
+        const revealedOffsetY = -20 + (revealedIndex * 5);
+        const revealedRotation = -2 - (revealedIndex * 0.5);
+        
+        el.style.transform = `translateX(${revealedOffsetX}px) translateY(${revealedOffsetY}px) rotateZ(${revealedRotation}deg)`;
+        el.style.zIndex = 20 + revealedIndex;
         
         if (isMeSubject) {
             favBtn.style.display = 'inline-block';
@@ -939,17 +930,109 @@ function updateCardDOM(idx) {
     } else {
         el.classList.remove('is-flipped');
         if (!isMeSubject) {
-            textEl.innerHTML = `<div style="font-size: 11px; color: var(--neon-pink); font-weight: 700; letter-spacing: 0.5px;">🔒 HIDDEN</div>`;
+            textEl.innerHTML = `<div style="font-size: 11px; color: var(--neon-pink); font-weight: 700; letter-spacing: 0.5px;">HIDDEN</div>`;
         }
     }
 }
 
+function recalculateUnrevealedHandPositions() {
+    const unrevealedCards = room.cards.map((c, idx) => (!c.revealed && !c.selected) ? idx : null).filter(i => i !== null);
+    const totalUnrevealed = unrevealedCards.length;
+    
+    if (totalUnrevealed === 0) return;
+    
+    const cardWidth = 110;
+    const overlapPercent = 0.50;
+    const cardSpacing = cardWidth * (1 - overlapPercent);
+    
+    unrevealedCards.forEach((idx, position) => {
+        const el = $(`rcard-${idx}`);
+        if (!el) return;
+        
+        const posX = position * cardSpacing + 20;
+        
+        const centerIdx = (totalUnrevealed - 1) / 2;
+        const distFromCenter = position - centerIdx;
+        const maxRotation = 12;
+        const rotation = (distFromCenter / Math.max(1, centerIdx)) * maxRotation;
+        
+        const verticalOffsetPercent = Math.abs(distFromCenter) / Math.max(1, centerIdx);
+        const posY = verticalOffsetPercent * 16;
+        
+        el.style.transform = `translateX(${posX}px) translateY(${posY}px) rotateZ(${rotation}deg)`;
+    });
+}
+
 // ── GAME OVER / SCOREBOARD ────────────────────────────────────────────────────
+function updateNextRoundButtonState() {
+    const nextBtn = $('nextRoundBtn');
+    const winnerSelected = room.cards.some(card => card.selected);
+    const isMeSubject = (net.myName === room.currentSubject);
+    const isHost = (net.role === 'host');
+    
+    let nextText = room.maxRounds === 'unlimited' 
+        ? `Next Round (${room.roundCount})` 
+        : `Next Round (${room.roundCount}/${room.maxRounds})`;
+
+    if (!winnerSelected) {
+        nextBtn.style.display = "none";
+        return;
+    }
+
+    if (isMeSubject) {
+        nextBtn.style.display = "block";
+        nextBtn.disabled = false;
+        nextBtn.innerText = nextText;
+        nextBtn.onclick = () => {
+            nextBtn.disabled = true;
+            nextBtn.innerText = "Starting...";
+            if (net.role === 'host') {
+                broadcastStartRound();
+            } else {
+                net.conn.send({ type: 'REQUEST_NEXT_ROUND' });
+            }
+        };
+    } else if (isHost) {
+        nextBtn.style.display = "block";
+        
+        if (window.hostWaitInterval) {
+            clearInterval(window.hostWaitInterval);
+        }
+        
+        nextBtn.disabled = true;
+        let secs = 10;
+        nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
+        
+        window.hostWaitInterval = setInterval(() => {
+            if (!$('scrRevealStage').classList.contains('active')) {
+                clearInterval(window.hostWaitInterval);
+                return;
+            }
+            secs--;
+            if (secs > 0) {
+                nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
+            } else {
+                clearInterval(window.hostWaitInterval);
+                nextBtn.disabled = false;
+                nextBtn.innerText = nextText;
+            }
+        }, 1000);
+
+        nextBtn.onclick = () => {
+            clearInterval(window.hostWaitInterval);
+            nextBtn.disabled = true;
+            broadcastStartRound();
+        };
+    } else {
+        nextBtn.style.display = "none";
+    }
+}
+
 function executeGameOverUI() {
     clearInterval(roundTimerInterval);
     room.roundActive = false;
 
-    $('revealPromptLabel').innerText  = `Game Over — ${room.roundCount} Round${room.roundCount !== 1 ? 's' : ''} Played`;
+    $('revealPromptLabel').innerText  = `Game Over - ${room.roundCount} Round${room.roundCount !== 1 ? 's' : ''} Played`;
     $('revealInstructions').innerText = "Final Results";
 
     const humanPlayers = room.players.filter(p => !p.startsWith('bot'));

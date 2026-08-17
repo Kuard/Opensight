@@ -17,10 +17,109 @@
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
+<!-- COIN MODE MODALS (Add right before </body>) -->
+<div class="modal-overlay" id="coinSilentBroadcastModal">
+    <div class="modal-card">
+        <div class="modal-title" style="color: var(--neon-cyan, #00f0ff);"> ANSWER REVEALED</div>
+        <div id="coinSilentModalContent" style="margin: 15px 0; font-size: 15px; font-weight: 600; text-align: center;"></div>
+        <button class="btn-main" style="padding: 10px;" onclick="document.getElementById('coinSilentBroadcastModal').classList.remove('active')">Got it!</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="coinEasterEggModal">
+    <div class="modal-card" style="border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);">
+        <div class="modal-title" style="color: #ffd700;"> MATRIX OVERRIDE </div>
+        <div class="modal-desc">The coin landed on its edge! Choose who becomes the next Subject.</div>
+        <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
+    </div>
+</div>
 <body>
 
 <div class="app-container">
+<!-- COIN MODE SCREENS (Add inside .app-container) -->
+<div class="screen" id="scrCoinPhase1">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">COIN MODE</div>
+        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()">✕</div>
+    </div>
 
+    <div id="coinSubjectSelectionBox" style="display:none; width:100%;">
+        <div class="brand-subtitle" style="text-align:center;">Read scenario & pick a target player:</div>
+        <div class="prompt-box" style="margin: 12px 0;"><div class="prompt-text" id="coinPromptDisplay">...</div></div>
+        <div class="section-title">Select Target Player</div>
+        <div id="coinTargetPlayerGrid" class="deck-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px;"></div>
+        
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button class="btn-main" id="coinContinueBtn" style="display:none; padding: 10px; font-size: 13px;" onclick="CoinMode.advanceToMatrixPhase()">
+                I Spoke My Answer Out Loud (Continue)
+            </button>
+            
+            <button class="btn-secondary" id="coinSilentBroadcastBtn" style="display:none; padding: 8px; font-size: 12px; border-color: var(--neon-cyan, #00f0ff); color: var(--neon-cyan, #00f0ff);" onclick="CoinMode.broadcastSilentAnswer()">
+                🔇 Muted: Show Choice on Screen
+            </button>
+        </div>
+    </div>
+
+    <div id="coinNonSubjectWaitingBox" style="display:none; width:100%;">
+        <div class="brand-subtitle" style="text-align:center;"><span id="coinWaitSubjectName">Subject</span> is picking a target...</div>
+        <div class="sub-track" id="coinWaitTargetLabel" style="text-align:center; color: var(--neon-pink, #ff0055); margin: 10px 0; font-weight:700;">Waiting...</div>
+        
+        <div class="fidget-board coin-fidget-board">
+            <div class="fidget-toy"><div class="clicker-btn" id="coinToyClicker" onclick="CoinMode.handleFidgetClick(this)">0</div></div>
+            <div class="fidget-toy"><div class="switch-track" id="coinToyToggle" onclick="CoinMode.handleFidgetToggle(this)"><div class="switch-handle"></div></div></div>
+            <div class="fidget-toy coin-fidget-toy-wide"><div class="bubble-grid" id="coinToyBubbleGrid"></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="screen" id="scrCoinPhase2" style="justify-content: center;">
+    <div class="brand-header" style="text-align: center; margin-bottom: 15px;">
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">MATRIX CHOICE</div>
+        <div class="brand-subtitle">Choose your side to keep it secret</div>
+    </div>
+    <div id="coinMatrixSubjectControls" style="display:none; width:100%;">
+        <div class="pill-container">
+            <button class="matrix-pill red" onclick="CoinMode.choosePillSide('heads')">
+                <div class="pill-title">HEADS </div>
+                <div class="pill-sub">RED</div>
+            </button>
+            <button class="matrix-pill blue" onclick="CoinMode.choosePillSide('tails')">
+                <div class="pill-title">TAILS</div>
+                <div class="pill-sub">BLUE</div>
+            </button>
+        </div>
+    </div>
+    <div id="coinMatrixWaitNotice" class="sub-track" style="display:none; text-align:center; color: var(--neon-pink, #ff0055);">Waiting...</div>
+</div>
+
+<div class="screen" id="scrCoinStage">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">THE FLIP</div>
+        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()">✕</div>
+    </div>
+    <div class="brand-subtitle" id="coinTapInstruction" style="text-align:center; margin-bottom: 10px;">TAP COIN TO FLIP</div>
+    <div class="coin-stage">
+        <div class="neon-coin" id="neonCoinElem">
+            <div class="coin-face coin-front">HEADS</div>
+            <div class="coin-face coin-back">TAILS</div>
+        </div>
+    </div>
+    <div class="coin-outcome-banner" id="coinOutcomeBanner" style="display:none;"></div>
+    <div class="prompt-box" id="coinRevealedQuestionCard" style="display:none; margin-top:15px;">...</div>
+    <button class="btn-main" id="coinNextRoundBtn" style="display:none; margin-top:auto;">Next Coin Round</button>
+</div>
+
+
+
+<div class="modal-overlay" id="coinEasterEggModal">
+    <div class="modal-card" style="border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);">
+        <div class="modal-title" style="color: #ffd700;"> MATRIX OVERRIDE </div>
+        <div class="modal-desc">The coin landed on its edge! Choose who becomes the next Subject.</div>
+        <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
+    </div>
+</div>
     <div class="screen active" id="scrMenu" style="justify-content: center;">
         <div class="brand-header" style="text-align: center; margin-bottom: 30px;">
             <div class="brand-title" style="font-size: 24px;">INSIGHT</div>
@@ -69,11 +168,40 @@
         <div id="lobbyPlayerGrid"></div> 
 
         <div id="hostOnlyControls" style="display:none;">
+            <!-- COMPACT MODE WIDGET (Moved from coinMode.js) -->
+<div id="modeSelectionContainer" style="margin: 8px 0; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+    <div class="section-title" style="font-size: 11px; margin-bottom: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-align: center;">GAME MODE</div>
+    
+    <div style="display: flex; gap: 6px;">
+        <button type="button" class="btn-secondary active" id="btnModeClassic" onclick="CoinMode.setGameMode('classic')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-pink, #ff0055);">Classic</button>
+        <button type="button" class="btn-secondary" id="btnModeCoin" onclick="CoinMode.setGameMode('coin')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-cyan, #00f0ff);"> Coin Mode</button>
+    </div>
+
+    <!-- COMPACT CATEGORY PICKER FOR COIN MODE -->
+    <div id="coinCategoryPicker" style="display: none; margin-top: 10px;">
+        <div style="display: flex; gap: 4px;">
+            <button type="button" class="btn-secondary btn-cat active" onclick="CoinMode.selectCategory('Party', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Party</button>
+            <button type="button" class="btn-secondary btn-cat" onclick="CoinMode.selectCategory('Spicy', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Spicy</button>
+            <button type="button" class="btn-secondary btn-cat" onclick="CoinMode.selectCategory('Deep', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Deep</button>
+        </div>
+    </div>
+
+    <!-- COMPACT ROUND LIMITER FOR COIN MODE (10 / 20 / 30) -->
+    <div id="coinRoundPicker" style="display: none; margin-top: 10px;">
+        <div style="font-size: 10px; margin-bottom: 6px; color: rgba(255,255,255,0.4); letter-spacing: 0.5px; text-align: center;">ROUNDS</div>
+        <div style="display: flex; gap: 4px;">
+            <button type="button" class="btn-secondary btn-coin-round active" id="coinRoundPill10" onclick="CoinMode.setCoinMaxRounds(10, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">10</button>
+            <button type="button" class="btn-secondary btn-coin-round" id="coinRoundPill20" onclick="CoinMode.setCoinMaxRounds(20, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">20</button>
+            <button type="button" class="btn-secondary btn-coin-round" id="coinRoundPill30" onclick="CoinMode.setCoinMaxRounds(30, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">30</button>
+        </div>
+    </div>
+</div>
+            <div id="classicOnlyControls">
             <div class="section-title">Choose Your Deck</div>
             <div class="deck-grid">
                 <div class="deck-pill active" id="deckPillClassic" onclick="setCategory('classic', this)">
                     <div class="deck-icon icon-mask"></div>
-                    <div class="deck-title">Classic</div><div class="deck-subtitle">Timeless</div>
+                    <div class="deck-title">Party</div><div class="deck-subtitle">Timeless</div>
                 </div>
                 <div class="deck-pill" onclick="setCategory('trouble', this)">
                     <div class="deck-icon icon-lightning"></div>
@@ -116,6 +244,7 @@
                     </div>
                     <div class="round-sub">Unlimited</div>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -248,5 +377,6 @@
         }
     });
 </script>
+
 </body>
 </html>
