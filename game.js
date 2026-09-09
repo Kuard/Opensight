@@ -1,34 +1,3 @@
-// ── FIREWALL-PROOF NETWORK CONFIGURATION ───────────────────────────────────────
-const PEER_CONFIG = {
-    config: {
-        'iceServers': [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: "stun:stun.relay.metered.ca:80" },
-            { 
-                urls: "turn:global.relay.metered.ca:80", 
-                username: "92040003f6021883d79e3d36", 
-                credential: "HakDD0N0nzTZrq+r" 
-            },
-            { 
-                urls: "turn:global.relay.metered.ca:80?transport=tcp", 
-                username: "92040003f6021883d79e3d36", 
-                credential: "HakDD0N0nzTZrq+r" 
-            },
-            { 
-                urls: "turn:global.relay.metered.ca:443", 
-                username: "92040003f6021883d79e3d36", 
-                credential: "HakDD0N0nzTZrq+r" 
-            },
-            { 
-                urls: "turns:global.relay.metered.ca:443?transport=tcp", 
-                username: "92040003f6021883d79e3d36", 
-                credential: "HakDD0N0nzTZrq+r" 
-            }
-        ]
-    }
-};
-
 // ── UTILITIES ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
@@ -46,15 +15,6 @@ const Sound = {
             osc.start(); osc.stop(this.ctx.currentTime + duration);
         } catch(e) {}
     }
-};
-
-const Vibrate = {
-    _api: navigator.vibrate ? navigator.vibrate.bind(navigator)
-        : (navigator.mozVibrate ? navigator.mozVibrate.bind(navigator) : null),
-    buzz(p) { if (!this._api) return; try { this._api(p); } catch(e) {} },
-    tap()   { this.buzz(45); },          
-    pop()   { this.buzz([30, 30, 30]); }, 
-    click() { this.buzz(35); },          
 };
 
 // ── QUESTION POOLS (Loaded dynamically) ─────────────────────────────────────────
@@ -77,11 +37,9 @@ fetch('questions.json')
     })
     .catch(err => {
         console.error("Error loading questions.json:", err);
-        alert("Failed to load questions from server. Check file paths.");
     });
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
-let net  = { peer: null, conn: null, connections: [], role: 'client', myName: '' };
 let room = {
     id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
     gameMode: 'classic',
@@ -134,42 +92,13 @@ function showScreen(id) {
     setTimeout(() => window.scrollTo(0, 1), 50);
 }
 
-function getCleanName() {
-    let n = $('menuNameInput').value.trim();
-    return n || "Player_" + Math.floor(Math.random() * 900);
-}
-
 function setCategory(cat, el) {
     room.currentCategory = cat;
     document.querySelectorAll('.deck-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     Sound.play(400, 'sine', 0.05);
-    Vibrate.click();
+    if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
     if (net.role === 'host') broadcastToAll({ type: 'SYNC_CATEGORY', category: cat });
-}
-
-let pendingNSFWEl = null;
-
-function confirmNSFW(el) {
-    pendingNSFWEl = el;
-    Sound.play(200, 'sine', 0.08);
-    Vibrate.click();
-    $('confirmNSFWModal').classList.add('active');
-}
-
-function dismissNSFWConfirmation() {
-    Sound.play(350, 'sine', 0.05);
-    Vibrate.click();
-    $('confirmNSFWModal').classList.remove('active');
-    pendingNSFWEl = null;
-}
-
-function acceptNSFWConfirmation() {
-    $('confirmNSFWModal').classList.remove('active');
-    if (pendingNSFWEl) {
-        setCategory('nsfw', pendingNSFWEl);
-    }
-    pendingNSFWEl = null;
 }
 
 function setMaxRounds(n, el) {
@@ -177,35 +106,14 @@ function setMaxRounds(n, el) {
     document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
     Sound.play(400, 'sine', 0.05);
-    Vibrate.click();
+    if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
     if (net.role === 'host') broadcastToAll({ type: 'SYNC_MAX_ROUNDS', maxRounds: n });
-}
-
-/* ── LEAVE CONFIRMATION SYSTEM ── */
-function triggerLeaveConfirmation() {
-    Sound.play(200, 'sine', 0.08);
-    Vibrate.click();
-    $('confirmLeaveModal').classList.add('active');
-}
-
-function dismissLeaveConfirmation() {
-    Sound.play(350, 'sine', 0.05);
-    Vibrate.click();
-    $('confirmLeaveModal').classList.remove('active');
-}
-
-function confirmLeaveRoom() {
-    $('confirmLeaveModal').classList.remove('active');
-    leaveRoom();
 }
 
 function leaveRoom() {
     clearInterval(roundTimerInterval);
     if (window.hostWaitInterval) clearInterval(window.hostWaitInterval);
-    if (net.peer) {
-        try { net.peer.destroy(); } catch(e) {}
-    }
-    net = { peer: null, conn: null, connections: [], role: 'client', myName: '' };
+    if (typeof disconnectPeer === 'function') disconnectPeer();
     room = {
         id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
         gameMode: 'classic',
@@ -220,18 +128,7 @@ function leaveRoom() {
     $('writerInput').value = "";
     
     showScreen('scrMenu');
-    Vibrate.click();
-}
-
-function addTestBots() {
-    if (net.role !== 'host') return;
-    ['bot1', 'bot2', 'bot3'].forEach(bot => {
-        if (!room.players.includes(bot)) room.players.push(bot);
-    });
-    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, playedQuestions: room.playedQuestions });
-    updateLobbyUI();
-    Sound.play(500, 'sine', 0.1);
-    Vibrate.tap();
+    if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
 }
 
 // ── WORD COUNTER ─────────────────────────────────────────────
@@ -274,88 +171,25 @@ function showToast(msg) {
     }, 3500);
 }
 
-// ── NETWORKING ─────────────────────────────────────────────────────────────────
-function createLiveRoom() {
-    net.myName = getCleanName();
-    net.role = 'host';
-    room.players = [net.myName];
-
-    room.currentCategory = 'classic';
-    room.maxRounds = 10;
-
-    const shortId = Math.random().toString(36).substring(2,6).toUpperCase();
-    net.peer = new Peer(shortId, PEER_CONFIG);
-
-    net.peer.on('open', (id) => {
-        room.id = id;
-        $('lobbyIdLabel').innerText = id;
-        $('hostOnlyControls').style.display = 'block';
-        $('hostStartBtn').style.display = 'block';
-        $('clientWaitNotice').style.display = 'none';
-        $('botAddBtn').style.display = 'flex';
-        resetLobbyDefaultsUI();
-        updateLobbyUI();
-        showScreen('scrLobby');
-    });
-
-    net.peer.on('connection', (connection) => {
-        connection.on('data', (data) => handleData(data, connection));
-        connection.on('open', () => {
-            connection.send({
-                type: 'SYNC_LOBBY',
-                players: room.players,
-                category: room.currentCategory,
-                playedQuestions: room.playedQuestions,
-                maxRounds: room.maxRounds,
-                roundCount: room.roundCount,
-                scores: room.scores,
-                lateJoiners: room.lateJoiners
-            });
-        });
-    });
-
-    net.peer.on('error', (err) => alert("Host error: " + err.type));
-}
-
-function joinLiveRoom() {
-    net.myName = getCleanName();
-    net.role = 'client';
-    const targetId = $('joinRoomInput').value.trim().toUpperCase();
-    if (!targetId) { alert("Please enter a Room ID"); return; }
-
-    net.peer = new Peer(undefined, PEER_CONFIG);
-    
-    net.peer.on('open', () => {
-        net.conn = net.peer.connect(targetId, { reliable: true });
-        
-        net.conn.on('open', () => {
-            net.conn.send({ type: 'JOIN', name: net.myName });
-            $('lobbyIdLabel').innerText = targetId;
-            $('hostOnlyControls').style.display = 'none';
-            $('hostStartBtn').style.display = 'none';
-            $('clientWaitNotice').style.display = 'block';
-            $('botAddBtn').style.display = 'none';
-            showScreen('scrLobby');
-        });
-        net.conn.on('data', (data) => handleData(data, null));
-        net.conn.on('error', () => alert("Could not connect. Check the Room ID and try again."));
-    });
-    net.peer.on('error', (err) => alert("Connection error: " + err.type));
-}
-
+// ── NETWORK MESSAGE HANDLING ─────────────────────────────────────────────────
 function handleData(data, connection) {
     if (data.type === 'JOIN' && net.role === 'host') {
-        if (room.players.includes(data.name)) {
-            if (connection) connection.send({ type: 'NAME_TAKEN' });
-            return;
+        // A reconnecting player sends JOIN again with their existing name over
+        // a brand-new connection object. Treat that as a resync, not a clash:
+        // replace the stale/dead connection entry for that name instead of
+        // rejecting as NAME_TAKEN.
+        const isKnownName = room.players.includes(data.name);
+        if (isKnownName) {
+            net.connections = net.connections.filter(c => c._kickName !== data.name || c === connection);
+        } else {
+            room.players.push(data.name);
         }
-        room.players.push(data.name);
-        
+
         if (!(data.name in room.scores)) room.scores[data.name] = 0;
 
         if (connection) {
             connection._kickName = data.name;
-            net.connections.push(connection);
+            if (!net.connections.includes(connection)) net.connections.push(connection);
         }
 
         if (room.roundActive) {
@@ -394,7 +228,7 @@ function handleData(data, connection) {
                 scores: room.scores,
                 lateJoiners: room.lateJoiners
             });
-            updateLobbyUI();
+            if (typeof updateLobbyUI === 'function') updateLobbyUI();
         }
     }
     else if (data.type === 'SYNC_LOBBY') {
@@ -406,7 +240,7 @@ function handleData(data, connection) {
         if (data.roundCount !== undefined) room.roundCount = data.roundCount;
         if (data.scores !== undefined) room.scores = data.scores;
         if (data.lateJoiners !== undefined) room.lateJoiners = data.lateJoiners;
-        updateLobbyUI();
+        if (typeof updateLobbyUI === 'function') updateLobbyUI();
     }
     else if (data.type === 'SYNC_CATEGORY') {
         room.currentCategory = data.category;
@@ -457,26 +291,28 @@ function handleData(data, connection) {
         renderRevealStage();
     }
     else if (data.type === 'FLIP_CARD') {
-        room.cards[data.index].revealed = true;
-        room.cards[data.index].revealedAt = Date.now();
-        updateCardDOM(data.index);
-        recalculateUnrevealedHandPositions();
+        const card = room.cards[data.index];
+        if (!card) return;
+        card.revealed = true;
+        card.revealedAt = Date.now();
+        syncRevealCard(data.index);
         if (net.role === 'host' && connection) {
-            try { connection.send(data); } catch(e){}
+            broadcastToConnections(data);
         }
     }
     else if (data.type === 'UNFLIP_CARD') {
-        room.cards[data.index].revealed = false;
-        updateCardDOM(data.index);
-        recalculateUnrevealedHandPositions();
+        const card = room.cards[data.index];
+        if (!card) return;
+        card.revealed = false;
+        card.revealedAt = null;
+        syncRevealCard(data.index);
         if (net.role === 'host' && connection) {
-            try { connection.send(data); } catch(e){} 
+            broadcastToConnections(data);
         }
     }
     else if (data.type === 'SELECT_CARD') {
         room.cards.forEach((c,i) => c.selected = (i === data.index));
-        room.cards.forEach((_,i) => updateCardDOM(i));
-        recalculateUnrevealedHandPositions();
+        if (window.CardSystem) CardSystem.render();
 
         if (net.role === 'host') {
             const winner = room.cards[data.index].creator;
@@ -542,65 +378,72 @@ function handleData(data, connection) {
         room.scores     = data.scores || room.scores;
         if (!room.lateJoiners.includes(data.name)) room.lateJoiners.push(data.name);
         showToast(`${data.name} joined the game!`);
-        Vibrate.tap();
+        if (typeof Vibrate !== 'undefined' && Vibrate.tap) Vibrate.tap();
     }
 }
 
-function broadcastToAll(payload) {
-    if (net.role === 'host') {
-        net.connections.forEach(c => { try { c.send(payload); } catch(e) {} });
-        handleData(payload, null);
-    }
-}
-
-// ── LOBBY UI ───────────────────────────────────────────────────────────────────
-function updateLobbyUI() {
-    const grid = $('lobbyPlayerGrid');
-    grid.innerHTML = "";
-    room.players.forEach(p => {
-        const pill = document.createElement('div');
-        pill.className = "player-pill";
-        const nameSpan = document.createElement('span');
-        nameSpan.innerText = p;
-        pill.appendChild(nameSpan);
-        if (net.role === 'host' && p !== net.myName) {
-            const kick = document.createElement('span');
-            kick.className = "kick-btn";
-            kick.innerHTML = "&times;";
-            kick.onclick = () => kickPlayer(p);
-            pill.appendChild(kick);
+// ── NETWORK STATUS HANDLING (connection lifecycle, not game messages) ───────
+function handleNetworkStatus(status, detail) {
+    if (status === 'player-left' && net.role === 'host') {
+        // A connection died (crash/close/error) without a clean KICKED flow.
+        // Prune them from the roster so a dead connection never lingers as a
+        // "connected" player, then let everyone know.
+        const name = detail && detail.name;
+        if (name && room.players.includes(name)) {
+            room.players = room.players.filter(p => p !== name);
+            delete room.scores[name];
+            broadcastToAll({
+                type: 'SYNC_LOBBY',
+                players: room.players,
+                category: room.currentCategory,
+                gameMode: room.gameMode,
+                playedQuestions: room.playedQuestions,
+                maxRounds: room.maxRounds,
+                roundCount: room.roundCount,
+                scores: room.scores,
+                lateJoiners: room.lateJoiners
+            });
+            if (typeof updateLobbyUI === 'function') updateLobbyUI();
+            showToast(`${name} disconnected`);
         }
-        grid.appendChild(pill);
-    });
-
-    const count  = room.players.length;
-    const needed = Math.max(0, 3 - count);
-    const lbl    = $('lobbyStatusLabel');
-    if (lbl) {
-        lbl.innerText = needed > 0
-            ? `${count} / 3 players - need ${needed} more`
-            : `${count} players - ready!`;
-        lbl.className = needed > 0 ? 'lobby-status' : 'lobby-status ready';
-    }
-
-    const startBtn = $('hostStartBtn');
-    if (startBtn) {
-        startBtn.disabled = count < 3;
-        startBtn.innerText = count < 3 ? `Need ${needed} more player${needed > 1 ? 's' : ''}...` : "Start Game";
+    } else if (status === 'disconnected' && net.role === 'client') {
+        showToast('Connection lost. Reconnecting...');
+    } else if (status === 'connected' && net.role === 'client') {
+        showToast('Reconnected!');
+    } else if (status === 'reconnect-failed' && net.role === 'client') {
+        showToast('Could not reconnect. Please rejoin the room.');
     }
 }
 
-function kickPlayer(name) {
-    const kickedConn = net.connections.find(c => c._kickName === name);
-    if (kickedConn) {
-        try { kickedConn.send({ type: 'KICKED' }); } catch(e) {}
-        setTimeout(() => { try { kickedConn.close(); } catch(e) {} }, 400);
-        net.connections = net.connections.filter(c => c !== kickedConn);
+// Register with networking.js. This dispatcher routes COIN_* messages to
+// CoinMode.handleNetwork and everything else to the local handleData above.
+// NOTE: coinMode.js also tries to wrap window.handleData at load time to do
+// this same routing, but script order (coinMode.js loads before game.js
+// defines `handleData`) means that wrapper gets silently overwritten by this
+// file's top-level `function handleData` declaration - so that interceptor
+// never actually runs. Doing the routing here instead makes it work
+// regardless of load order and is the single place messages are dispatched.
+function _routeNetworkMessage(data, connection) {
+    if (data && data.type && data.type.startsWith('COIN_') && typeof CoinMode !== 'undefined') {
+        CoinMode.handleNetwork(data, connection);
+    } else {
+        handleData(data, connection);
     }
-    room.players = room.players.filter(p => p !== name);
-    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, playedQuestions: room.playedQuestions });
-    updateLobbyUI();
-    Vibrate.click();
+}
+
+function _wireNetworkCallbacks() {
+    if (typeof onNetworkData === 'function') {
+        onNetworkData(_routeNetworkMessage);
+    }
+    if (typeof onNetworkStatus === 'function') {
+        onNetworkStatus(handleNetworkStatus);
+    }
+}
+
+if (typeof onNetworkData === 'function') {
+    _wireNetworkCallbacks();
+} else {
+    document.addEventListener('DOMContentLoaded', _wireNetworkCallbacks);
 }
 
 // ── ROUND FLOW ─────────────────────────────────────────────────────────────────
@@ -694,22 +537,22 @@ function startRoundExecution() {
             timeRemaining--;
         }, 1000);
 
-        room.players.forEach(p => {
-            if (p.startsWith('bot') && p !== room.currentSubject) {
-                setTimeout(() => {
-                    const botAnswers = ["100% true.", "Classic behavior.", "Without a doubt.", "Secretly an expert.", "Probably under pressure."];
-                    const txt = botAnswers[Math.floor(Math.random() * botAnswers.length)];
-                    handleData({ type: 'SUBMIT_CARD', text: `[${p}] ${txt}`, creator: p }, null);
-                }, 1000 + Math.random() * 1500);
-            }
-        });
+        if (typeof Bots !== 'undefined') {
+            Bots.scheduleClassicAnswers(
+                room.players,
+                room.currentSubject,
+                () => room.roundActive,
+                player => room.cards.some(card => card.creator === player),
+                payload => handleData(payload, null)
+            );
+        }
     }
 
     if (net.myName === room.currentSubject) {
-        $('subjectPromptLabel').innerText = room.currentPrompt;
+        $('subjectPromptBox').style.display = 'none';
         $('submissionTrackLabel').innerText = "0 cards locked in...";
-        setupFidgets();
         showScreen('scrSubjectLounge');
+        requestAnimationFrame(() => setupFidgets());
     } else {
         $('writerCategoryLabel').innerText = (room.currentCategory === 'classic' ? 'party' : room.currentCategory).toUpperCase();
         $('activePromptLabel').innerText   = room.currentPrompt;
@@ -722,6 +565,7 @@ function submitWriterCard() {
     const txt = $('writerInput').value.trim();
     if (!txt) return;
 
+    if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
     $('lockInBtn').disabled  = true;
     $('lockInBtn').innerText = "Locked";
 
@@ -747,7 +591,6 @@ function renderRevealStage() {
     const gameOver = outOfPrompts || roundLimitReached;
 
     let nextBtn = $('nextRoundBtn');
-    const winnerSelected = room.cards.some(card => card.selected);
 
     if (gameOver) {
         if (isHost) {
@@ -756,7 +599,10 @@ function renderRevealStage() {
             nextBtn.innerText = roundLimitReached
                 ? `End Game (Round ${room.roundCount}/${room.maxRounds})`
                 : "End Game (No Prompts Left)";
-            nextBtn.onclick = () => broadcastToAll({ type: 'GAME_OVER', scores: room.scores, lateJoiners: room.lateJoiners });
+            nextBtn.onclick = () => {
+                if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+                broadcastToAll({ type: 'GAME_OVER', scores: room.scores, lateJoiners: room.lateJoiners });
+            };
         } else {
             nextBtn.style.display = "none";
         }
@@ -765,126 +611,67 @@ function renderRevealStage() {
     }
 
     $('revealInstructions').innerText = isMeSubject
-        ? "Tap the deck to reveal. Pick a favourite to win!"
+        ? "Tap/swipe cards to reveal. Pick a favourite to win!"
         : `${room.currentSubject} is judging...`;
 
     const container = $('cardsWrapper');
-    container.innerHTML = "";
-    container.classList.add('fanned-hand');
 
-    room.cards.forEach((c, idx) => {
-        const el = document.createElement('div');
-        el.id = `rcard-${idx}`;
-        el.className = 'reveal-card-scene';
-        
-        el.style.setProperty('--i', idx);
-        el.style.setProperty('--total', room.cards.length);
-
-        const totalCards = room.cards.length;
-        const cardWidth = 110;
-        const overlapPercent = 0.50;
-        const cardSpacing = cardWidth * (1 - overlapPercent);
-        
-        const posX = idx * cardSpacing + 20;
-        
-        const centerIdx = (totalCards - 1) / 2;
-        const distFromCenter = idx - centerIdx;
-        const maxRotation = 12;
-        const rotation = (distFromCenter / Math.max(1, centerIdx)) * maxRotation;
-        
-        const verticalOffsetPercent = Math.abs(distFromCenter) / Math.max(1, centerIdx);
-        const posY = verticalOffsetPercent * 16;
-        
-        el.style.transform = `translateX(${posX}px) translateY(${posY}px) rotateZ(${rotation}deg)`;
-        
-        el.innerHTML = `
-            <div class="reveal-card-inner">
-                <div class="reveal-card-face reveal-card-front"></div>
-                <div class="reveal-card-face reveal-card-back">
-                    <div class="card-text"></div>
-                    <div class="author-reveal" style="display:none;"></div>
-                    <button class="fav-btn" style="display:none;">WINNER</button>
-                </div>
-            </div>
-        `;
-        container.appendChild(el);
-        updateCardDOM(idx);
-
-        el.onclick = (e) => {
-            if (!isMeSubject) return;
-            if (Date.now() - screenTransitionChangeTime < 1500) return;
-            
-            if (e.target.classList.contains('fav-btn')) {
-                if (!room.cards.some(card => card.selected) && room.cards[idx].revealed) {
-                    if (Date.now() - (room.cards[idx].revealedAt || 0) < 1200) return; 
-                    Sound.play(280, 'sine', 0.15);
-                    Vibrate.buzz([20, 30, 40]);
-                    const payload = { type: 'SELECT_CARD', index: idx };
-                    if (net.role === 'host') broadcastToAll(payload);
-                    else {
-                        room.cards.forEach((c,i) => c.selected = (i === idx));
-                        room.cards.forEach((_,i) => updateCardDOM(i));
-                        net.conn.send(payload);
-                    }
-                }
-                return; 
-            }
-
-            if (!room.cards[idx].revealed) {
-                const topHiddenIdx = room.cards.findIndex(c => !c.revealed);
-                
-                if (topHiddenIdx !== -1) {
-                    Sound.play(300, 'triangle', 0.1);
-                    Vibrate.tap();
-                    room.cards[topHiddenIdx].revealedAt = Date.now();
-                    
-                    const payload = { type: 'FLIP_CARD', index: topHiddenIdx };
-                    if (net.role === 'host') broadcastToAll(payload);
-                    else {
-                        room.cards[topHiddenIdx].revealed = true;
-                        updateCardDOM(topHiddenIdx);
-                        net.conn.send(payload);
-                    }
-                }
-            } else if (!room.cards.some(card => card.selected)) {
-                const topRevealedIdx = room.cards.map(c => c.revealed).lastIndexOf(true);
-                
-                if (topRevealedIdx !== -1) {
-                    Sound.play(150, 'sine', 0.05);
-                    Vibrate.click();
-                    
-                    const payload = { type: 'UNFLIP_CARD', index: topRevealedIdx };
-                    if (net.role === 'host') broadcastToAll(payload);
-                    else {
-                        room.cards[topRevealedIdx].revealed = false;
-                        updateCardDOM(topRevealedIdx);
-                        net.conn.send(payload);
-                    }
-                }
-            }
-        };
+    CardSystem.init(container, room.cards, {
+        isMeSubject: isMeSubject,
+        screenTransitionTime: screenTransitionChangeTime,
+        onFlip: (idx) => {
+            const payload = { type: 'FLIP_CARD', index: idx };
+            room.cards[idx].revealed = true;
+            room.cards[idx].revealedAt = Date.now();
+            syncRevealCard(idx);
+            if (net.role === 'host') broadcastToAll(payload);
+            else net.conn.send(payload);
+        },
+        onUnflip: (idx) => {
+            const payload = { type: 'UNFLIP_CARD', index: idx };
+            room.cards[idx].revealed = false;
+            syncRevealCard(idx);
+            if (net.role === 'host') broadcastToAll(payload);
+            else net.conn.send(payload);
+        },
+        onSelect: (idx) => {
+            const payload = { type: 'SELECT_CARD', index: idx };
+            room.cards.forEach((c, i) => c.selected = (i === idx));
+            CardSystem.render();
+            if (net.role === 'host') handleData(payload, null);
+            else net.conn.send(payload);
+        }
     });
 
     showScreen('scrRevealStage');
 
-    if (net.role === 'host' && room.currentSubject.startsWith('bot')) {
+        if (net.role === 'host' && Bots.isBot(room.currentSubject)) {
         let currentFlipIdx = 0;
+            let botWinnerChosen = false;
         function autoProcessBotSubject() {
             if (!$('scrRevealStage').classList.contains('active')) return;
             
             if (currentFlipIdx < room.cards.length) {
                 if (!room.cards[currentFlipIdx].revealed) {
                     room.cards[currentFlipIdx].revealed = true;
+                    syncRevealCard(currentFlipIdx);
                     broadcastToAll({ type: 'FLIP_CARD', index: currentFlipIdx });
                 }
                 currentFlipIdx++;
                 setTimeout(autoProcessBotSubject, 1500);
             } else {
                 const checkUnselected = room.cards.every(c => !c.selected);
-                if (checkUnselected && room.cards.length > 0) {
+                if (checkUnselected && room.cards.length > 0 && !botWinnerChosen) {
+                    botWinnerChosen = true;
                     const winningIdx = Math.floor(Math.random() * room.cards.length);
                     room.cards.forEach((c, i) => c.selected = (i === winningIdx));
-                    broadcastToAll({ type: 'SELECT_CARD', index: winningIdx });
+                    CardSystem.render();
+                    const selection = { type: 'SELECT_CARD', index: winningIdx };
+                    handleData(selection, null);
+                    net.connections.forEach(connection => {
+                        if (!connection.open) return;
+                        try { connection.send(selection); } catch (e) {}
+                    });
                 }
             }
         }
@@ -892,142 +679,13 @@ function renderRevealStage() {
     }
 }
 
-function updateCardDOM(idx) {
-    const el = $(`rcard-${idx}`);
-    if (!el) return;
-    const c = room.cards[idx];
-    const isMeSubject = (net.myName === room.currentSubject);
-
-    const textEl = el.querySelector('.card-text');
-    const authorEl = el.querySelector('.author-reveal');
-    const favBtn = el.querySelector('.fav-btn');
-
-    if (c.selected) {
-        el.classList.add('selected', 'is-flipped');
-        textEl.innerText = c.text;
-        authorEl.innerHTML = `Written by: ${c.creator}`;
-        authorEl.style.display = 'block';
-        favBtn.style.display = 'none';
-    } else if (c.revealed) {
-        el.classList.add('is-flipped');
-        textEl.innerText = c.text;
-        
-        const revealedIndex = room.cards.slice(0, idx).filter(card => card.revealed).length;
-        
-        const revealedOffsetX = -140 - (revealedIndex * 6);
-        const revealedOffsetY = -20 + (revealedIndex * 5);
-        const revealedRotation = -2 - (revealedIndex * 0.5);
-        
-        el.style.transform = `translateX(${revealedOffsetX}px) translateY(${revealedOffsetY}px) rotateZ(${revealedRotation}deg)`;
-        el.style.zIndex = 20 + revealedIndex;
-        
-        if (isMeSubject) {
-            favBtn.style.display = 'inline-block';
-        } else {
-            favBtn.style.display = 'none';
-        }
-        authorEl.style.display = 'none';
-    } else {
-        el.classList.remove('is-flipped');
-        if (!isMeSubject) {
-            textEl.innerHTML = `<div style="font-size: 11px; color: var(--neon-pink); font-weight: 700; letter-spacing: 0.5px;">HIDDEN</div>`;
-        }
+function syncRevealCard(idx) {
+    if (window.CardSystem) {
+        CardSystem.syncCard(idx, room.cards[idx]);
     }
-}
-
-function recalculateUnrevealedHandPositions() {
-    const unrevealedCards = room.cards.map((c, idx) => (!c.revealed && !c.selected) ? idx : null).filter(i => i !== null);
-    const totalUnrevealed = unrevealedCards.length;
-    
-    if (totalUnrevealed === 0) return;
-    
-    const cardWidth = 110;
-    const overlapPercent = 0.50;
-    const cardSpacing = cardWidth * (1 - overlapPercent);
-    
-    unrevealedCards.forEach((idx, position) => {
-        const el = $(`rcard-${idx}`);
-        if (!el) return;
-        
-        const posX = position * cardSpacing + 20;
-        
-        const centerIdx = (totalUnrevealed - 1) / 2;
-        const distFromCenter = position - centerIdx;
-        const maxRotation = 12;
-        const rotation = (distFromCenter / Math.max(1, centerIdx)) * maxRotation;
-        
-        const verticalOffsetPercent = Math.abs(distFromCenter) / Math.max(1, centerIdx);
-        const posY = verticalOffsetPercent * 16;
-        
-        el.style.transform = `translateX(${posX}px) translateY(${posY}px) rotateZ(${rotation}deg)`;
-    });
 }
 
 // ── GAME OVER / SCOREBOARD ────────────────────────────────────────────────────
-function updateNextRoundButtonState() {
-    const nextBtn = $('nextRoundBtn');
-    const winnerSelected = room.cards.some(card => card.selected);
-    const isMeSubject = (net.myName === room.currentSubject);
-    const isHost = (net.role === 'host');
-    
-    let nextText = room.maxRounds === 'unlimited' 
-        ? `Next Round (${room.roundCount})` 
-        : `Next Round (${room.roundCount}/${room.maxRounds})`;
-
-    if (!winnerSelected) {
-        nextBtn.style.display = "none";
-        return;
-    }
-
-    if (isMeSubject) {
-        nextBtn.style.display = "block";
-        nextBtn.disabled = false;
-        nextBtn.innerText = nextText;
-        nextBtn.onclick = () => {
-            nextBtn.disabled = true;
-            nextBtn.innerText = "Starting...";
-            if (net.role === 'host') {
-                broadcastStartRound();
-            } else {
-                net.conn.send({ type: 'REQUEST_NEXT_ROUND' });
-            }
-        };
-    } else if (isHost) {
-        nextBtn.style.display = "block";
-        
-        if (window.hostWaitInterval) {
-            clearInterval(window.hostWaitInterval);
-        }
-        
-        nextBtn.disabled = true;
-        let secs = 10;
-        nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
-        
-        window.hostWaitInterval = setInterval(() => {
-            if (!$('scrRevealStage').classList.contains('active')) {
-                clearInterval(window.hostWaitInterval);
-                return;
-            }
-            secs--;
-            if (secs > 0) {
-                nextBtn.innerText = nextText + ` (Waiting for Subject... ${secs}s)`;
-            } else {
-                clearInterval(window.hostWaitInterval);
-                nextBtn.disabled = false;
-                nextBtn.innerText = nextText;
-            }
-        }, 1000);
-
-        nextBtn.onclick = () => {
-            clearInterval(window.hostWaitInterval);
-            nextBtn.disabled = true;
-            broadcastStartRound();
-        };
-    } else {
-        nextBtn.style.display = "none";
-    }
-}
-
 function executeGameOverUI() {
     clearInterval(roundTimerInterval);
     room.roundActive = false;
@@ -1098,6 +756,7 @@ function executeGameOverUI() {
         $('nextRoundBtn').style.display = "block";
         $('nextRoundBtn').innerText = "Return to Lobby";
         $('nextRoundBtn').onclick = () => {
+            if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
             room.playedQuestions = [];
             room.roundCount      = 0;
             room.scores          = {};
@@ -1122,36 +781,13 @@ function executeGameOverUI() {
 }
 
 function setupFidgets() {
-    const clk = $('toyClicker');
-    clk.innerText = "0";
-    clk.onclick = () => {
-        const n = parseInt(clk.innerText) + 1;
-        clk.innerText = n;
-        Sound.play(400 + (n % 10) * 20, 'triangle', 0.05);
-        Vibrate.tap();
-    };
+    const board = document.querySelector('#scrSubjectLounge .fidget-board');
+    if (board) board.style.display = 'grid';
 
-    const tgl = $('toyToggle');
-    tgl.classList.remove('on');
-    tgl.onclick = () => {
-        tgl.classList.toggle('on');
-        Sound.play(150, 'sine', 0.05);
-        Vibrate.click();
-    };
-
-    const bGrid = $('toyBubbleGrid');
-    bGrid.innerHTML = "";
-    for (let i = 0; i < 8; i++) {
-        const b = document.createElement('div');
-        b.className = "bubble";
-        b.onclick = () => {
-            if (!b.classList.contains('popped')) {
-                b.classList.add('popped');
-                Sound.play(600, 'sine', 0.02);
-                Vibrate.pop();
-                setTimeout(() => b.classList.remove('popped'), 3000);
-            }
-        };
-        bGrid.appendChild(b);
+    if (typeof Fidget === 'undefined') {
+        setTimeout(setupFidgets, 100);
+        return;
     }
+
+    Fidget.setup({ clickerId: 'toyClicker', toggleId: 'toyToggle', bubbleGridId: 'toyBubbleGrid' });
 }

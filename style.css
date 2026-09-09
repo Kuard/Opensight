@@ -76,36 +76,9 @@ html, body {
 .input-field:focus { border-color: var(--neon-pink); background: rgba(255,0,85,0.1); box-shadow: 0 0 18px rgba(255,0,85,0.35); }
 .room-code-input { text-transform: uppercase; font-family: 'Permanent Marker', cursive; font-size: 24px; letter-spacing: 4px; }
 
-.btn-main {
-    background: linear-gradient(90deg, rgba(255, 0, 85, 0.8), rgba(255, 0, 85, 0.5));
-    border: 1px solid var(--neon-pink); border-radius: 14px; padding: 16px;
-    width: 100%; color: #fff; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;
-    cursor: pointer; margin-bottom: 8px; transition: 0.2s; box-shadow: 0 0 26px rgba(255,0,85,0.45), 0 0 6px rgba(255,0,85,0.6);
-}
-.btn-main:active { transform: scale(0.98); }
-.btn-main:disabled { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: var(--text-secondary); box-shadow: none; cursor: not-allowed; }
-
-.btn-secondary {
-    background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
-    padding: 14px; width: 100%; color: var(--text-secondary); font-weight: 600;
-    cursor: pointer; transition: 0.2s;
-}
-.btn-secondary:active { background: rgba(255,255,255,0.05); }
-
-/* Coin Mode round-limit pills (10/20/30) — mirrors .btn-cat's cyan active
-   state, kept separate from .round-pill's pink so Coin Mode's own controls
-   stay visually distinct from classic mode's round-length picker. */
-.btn-coin-round.active { border-color: var(--neon-cyan, #00f0ff); background: rgba(0, 240, 255, 0.15); color: var(--neon-cyan, #00f0ff); }
-
 /* Headers */
 .lobby-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .brand-title { color: var(--text-primary); font-size: 16px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase; text-align: center; width: 100%; }
-.circle-btn { 
-    width: 36px; height: 36px; border-radius: 50%;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-    color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer;
-}
-
 /* Room Section */
 .room-section { text-align: center; margin-bottom: 4px; }
 .room-code-display {
@@ -118,12 +91,6 @@ html, body {
     margin: 2px 0;
     text-align: center;
 }
-.btn-outline {
-    background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--text-secondary);
-    padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 6px; margin: 0 auto 4px auto;
-}
-
 /* Player Grid */
 .lobby-status {
     text-align: center; font-size: 12px; 
@@ -143,340 +110,43 @@ html, body {
     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
     padding: 6px 14px; font-size: 12px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 6px;
 }
-.kick-btn { color: var(--neon-pink); cursor: pointer; font-size: 14px; font-weight: bold; line-height: 1; }
-
-/* Decks and Rounds */
-.deck-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
-.deck-pill {
-    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.4));
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; 
-    padding: 6px 2px;
-    display: flex; flex-direction: column; align-items: center; text-align: center;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); position: relative; cursor: pointer;
-}
-.deck-pill.active { border-color: var(--neon-pink); background: rgba(255, 0, 85, 0.14); box-shadow: 0 0 30px rgba(255, 0, 85, 0.4), inset 0 0 14px rgba(255, 0, 85, 0.2); }
-.deck-pill.active::after {
-    content: "✓"; position: absolute; top: -4px; right: -4px; width: 18px; height: 18px;
-    background: var(--neon-pink); color: #fff; border-radius: 50%; font-size: 10px;
-    display: flex; align-items: center; justify-content: center; font-weight: 800;
-}
-.deck-icon {
-    width: 20px; height: 20px;
-    margin-bottom: 2px;
-    display: inline-block;
-    -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center;
-}
-.icon-mask { background: linear-gradient(180deg, #6366f1, #3730a3); -webkit-mask-image: var(--icon-mask); mask-image: var(--icon-mask); }
-.icon-lightning { background: linear-gradient(180deg, #f59e0b, #b45309); -webkit-mask-image: var(--icon-lightning); mask-image: var(--icon-lightning); }
-.icon-pepper { background: linear-gradient(180deg, #ef4444, #991b1b); -webkit-mask-image: var(--icon-pepper); mask-image: var(--icon-pepper); }
-.icon-brain { background: linear-gradient(180deg, #a855f7, #6b21a8); -webkit-mask-image: var(--icon-brain); mask-image: var(--icon-brain); }
-.icon-sparkles { background: linear-gradient(180deg, #f97316, #c2410c); -webkit-mask-image: var(--icon-sparkles); mask-image: var(--icon-sparkles); }
-.icon-trash { background: linear-gradient(180deg, #22c55e, #15803d); -webkit-mask-image: var(--icon-trash); mask-image: var(--icon-trash); }
-.icon-18 { background: linear-gradient(180deg, #f43f5e, #be123c); -webkit-mask-image: var(--icon-18); mask-image: var(--icon-18); }
-.icon-dice { background: linear-gradient(180deg, #0ea5e9, #0369a1); -webkit-mask-image: var(--icon-dice); mask-image: var(--icon-dice); }
-.deck-title { font-size: 11px; font-weight: 600; color: var(--text-primary); margin-bottom: 1px; }
-.deck-subtitle { font-size: 9px; color: var(--text-secondary); }
-
-.round-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
-.round-pill { background: rgba(255,255,255,0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 10px 4px; text-align: center; cursor: pointer; }
-.round-pill.active { border-color: var(--neon-pink); background: rgba(255, 0, 85, 0.1); box-shadow: 0 0 24px rgba(255, 0, 85, 0.4); }
-.round-val { font-size: 16px; font-weight: 700; color: var(--text-secondary); line-height: 1; margin-bottom: 2px; display: flex; justify-content: center; align-items: center; min-height: 18px; }
-.round-sub { font-size: 9px; font-weight: 500; color: var(--text-dark); }
-.round-pill.active .round-val, .round-pill.active .round-sub { color: var(--neon-pink); }
-
-.btn-bot-add {
-    padding: 0;
-    margin: 0;
-    flex-shrink: 0;
-}
-.btn-bot-add:active { background: rgba(255,255,255,0.08); transform: scale(0.94); }
-
 /* GAME UI */
 .prompt-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,0,85,0.25); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 12px; box-shadow: 0 0 22px rgba(255,0,85,0.12), inset 0 0 20px rgba(255,0,85,0.05); }
 .prompt-text { font-size: 16px; font-weight: 700; line-height: 1.4; color: #fff; word-break: break-word; }
-
-/* FIDGET TOYS */
-.fidget-board { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
-.fidget-toy { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.clicker-btn { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(145deg, #1a1525, #0f0b1a); box-shadow: 4px 4px 10px rgba(0,0,0,0.5), -4px -4px 10px rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: var(--neon-pink); cursor: pointer; user-select: none; transition: 0.1s; border: 2px solid rgba(255,255,255,0.05); }
-.clicker-btn:active { transform: scale(0.9); box-shadow: inset 4px 4px 10px rgba(0,0,0,0.8); }
-.switch-track { width: 50px; height: 28px; border-radius: 14px; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.1); position: relative; cursor: pointer; transition: 0.3s; }
-.switch-handle { width: 20px; height: 20px; border-radius: 50%; background: var(--text-secondary); position: absolute; top: 2px; left: 2px; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-.switch-track.on { background: rgba(0, 255, 166, 0.2); border-color: var(--neon-green); }
-.switch-track.on .switch-handle { left: 24px; background: var(--neon-green); box-shadow: 0 0 18px var(--neon-green), 0 0 6px var(--neon-green); }
-.bubble-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.bubble { width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), rgba(0,0,0,0.4)); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), inset -2px -2px 5px rgba(0,0,0,0.5); }
-.bubble.popped { transform: scale(0.9); background: rgba(0,0,0,0.6); box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8); border-color: transparent; }
+.card-textarea {
+    width: 100%;
+    min-height: 105px;
+    resize: none;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    caret-color: var(--neon-pink);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: left;
+    user-select: text;
+    -webkit-user-select: text;
+    outline: none;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+}
+.card-textarea::placeholder { color: var(--text-secondary); }
+.card-textarea:focus {
+    border-color: var(--neon-pink);
+    background: rgba(255,0,85,0.1);
+    box-shadow: 0 0 18px rgba(255,0,85,0.35);
+}
 
 /* REVEAL STAGE & CARD WRAPPER */
+/* Card-specific styling (#cardsWrapper sizing, .reveal-card-* classes, fav-btn,
+   author-reveal, responsive card rules) now lives entirely in cards.css - this
+   used to be duplicated here (an old "UNO-style two-pile hand" layout) and
+   fought with cards.css, including several !important overrides on the
+   winner-selected state. Only genuinely non-card reveal-screen rules remain. */
 #scrRevealStage { padding-bottom: 0; }
 #revealInstructions { margin-bottom: 10px; }
-#cardsWrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 260px; /* Provides vertical room for the 3D effect */
-    margin: 20px 0;
-    position: relative;
-    overflow: visible; /* Kills the scrollbar */
-    max-height: none; 
-}
-#nextRoundBtn {
-    margin: 24px auto 0 auto;
-    display: block;
-    flex-shrink: 0;
-}
-
-/* --- UNO-STYLE TWO-PILE CARD HAND --- */
-#cardsWrapper { 
-    display: flex; 
-    justify-content: center;
-    align-items: flex-end;
-    height: 200px; 
-    margin: 0 0 10px 0; 
-    position: relative; 
-    overflow: visible;
-    padding: 0 60px;
-    gap: 20px;
-    transform: translateY(-40px);
-}
-
-/* Left Pile: Revealed Cards */
-#cardsWrapper::before {
-    content: attr(data-revealed-label);
-    position: absolute;
-    left: 12px;
-    top: -24px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-/* Right Pile: Unrevealed Cards */
-#cardsWrapper::after {
-    content: attr(data-unrevealed-label);
-    position: absolute;
-    right: 12px;
-    top: -24px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.4);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-.fanned-hand { 
-    perspective: 1200px;
-    position: relative;
-    height: 100%;
-}
-
-.reveal-card-scene { 
-    position: absolute; 
-    width: 110px; 
-    height: 135px;
-    bottom: 0;
-    cursor: pointer;
-    z-index: 10;
-    
-    /* Smooth transition for position and rotation */
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                box-shadow 0.3s ease;
-    
-    /* Default: unrevealed, positioned on the right (starting position) */
-    /* Will be overridden by inline styles from JavaScript */
-}
-
-.reveal-card-scene.is-flipped { 
-    /* When flipped, move to the left side but preserve the rotation from right pile */
-    /* Positioning is calculated dynamically in JavaScript for proper stacking */
-    z-index: 20;
-}
-/* 3D Flip Mechanics */
-.reveal-card-inner { 
-    position: relative; 
-    width: 100%; 
-    height: 100%; 
-    text-align: center; 
-    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); 
-    transform-style: preserve-3d; 
-}
-
-.reveal-card-scene.is-flipped .reveal-card-inner { transform: rotateY(180deg); }
-
-.reveal-card-face { 
-    position: absolute; 
-    width: 100%; 
-    height: 180px;
-    backface-visibility: hidden; 
-    border-radius: 12px; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    padding: 12px; 
-    border: 1px solid rgba(255,255,255,0.15); 
-    background: #140f1e;
-    opacity: 1 !important;
-    
-    /* Physical card shadow */
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
-                inset 0 1px 0 rgba(255,255,255,0.05);
-    
-    /* Subtle depth */
-    transform-style: preserve-3d;
-}
-
-.reveal-card-scene:hover .reveal-card-face {
-    /* Stronger shadow on hover */
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5),
-                inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-.reveal-card-front { 
-    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink)); 
-    color: white;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-.reveal-card-front::after { 
-    content: "INSIGHT"; 
-    font-size: 20px; 
-    font-weight: 900; 
-    letter-spacing: 2px; 
-    transform: rotate(-45deg); 
-}
-
-.reveal-card-back {
-    transform: rotateY(180deg);
-    color: white;
-    font-size: 13px;
-    font-weight: 500;
-    word-break: break-word;
-    overflow-y: auto;
-    padding: 12px;
-    text-align: center;
-    justify-content: center;
-    background: #140f1e;
-}
-
-/* Force the Winner card to be opaque and solid */
-.reveal-card-scene.selected .reveal-card-back {
-    background: #140f1e !important; 
-    border: 2px solid var(--neon-green) !important;
-    box-shadow: 0 0 50px rgba(0, 255, 166, 0.6),
-                0 8px 20px rgba(0, 255, 166, 0.3) !important;
-    opacity: 1 !important;
-    z-index: 1000 !important;
-    transform: rotateY(180deg) scale(1.08);
-}
-
-.author-reveal { 
-    margin-top: 8px; 
-    font-size: 9px; 
-    color: var(--neon-green); 
-    font-weight: 700; 
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.fav-btn { 
-    background: var(--neon-green); 
-    color: #000; 
-    border: none; 
-    border-radius: 18px; 
-    padding: 7px 12px; 
-    font-size: 10px; 
-    font-weight: 800; 
-    cursor: pointer; 
-    margin-top: 10px;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(0, 255, 166, 0.25);
-}
-
-.fav-btn:hover {
-    background: #00ff9f;
-    box-shadow: 0 6px 16px rgba(0, 255, 166, 0.4);
-    transform: scale(1.05);
-}
-
-.fav-btn:active {
-    transform: scale(0.98);
-}
-
-/* RESPONSIVE DESIGN FOR MOBILE */
-@media (max-width: 500px) {
-    #cardsWrapper { 
-        height: 180px;
-        gap: 10px;
-        padding: 0 40px;
-        transform: translateY(-30px);
-    }
-
-    .reveal-card-scene { 
-        width: 95px;
-        height: 120px;
-    }
-
-    .reveal-card-face {
-        height: 160px;
-        padding: 10px;
-        font-size: 12px;
-        border-radius: 10px;
-    }
-
-    .reveal-card-front::after {
-        font-size: 18px;
-    }
-
-    .reveal-card-back {
-        font-size: 12px;
-        padding: 10px;
-    }
-
-    .fav-btn {
-        padding: 6px 10px;
-        font-size: 9px;
-    }
-
-    .author-reveal {
-        font-size: 8px;
-        margin-top: 6px;
-    }
-}
-
-@media (max-width: 380px) {
-    #cardsWrapper { 
-        height: 160px;
-        gap: 8px;
-        padding: 0 30px;
-        transform: translateY(-20px);
-    }
-
-    .reveal-card-scene { 
-        width: 85px;
-        height: 105px;
-    }
-
-    .reveal-card-face {
-        height: 145px;
-        padding: 8px;
-    }
-
-    .reveal-card-front::after {
-        font-size: 16px;
-        letter-spacing: 1px;
-    }
-
-    .reveal-card-back {
-        font-size: 11px;
-        padding: 8px;
-    }
-}
-
 /* SCOREBOARD */
 .scoreboard { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-top: 10px; }
 .scoreboard-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 800; color: var(--neon-green); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 2px; }
@@ -492,13 +162,6 @@ html, body {
 /* TOASTS & MODALS */
 .game-toast { position: fixed; top: 16px; left: 50%; transform: translate(-50%, -20px); background: var(--neon-pink); color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 12px; font-weight: 700; box-shadow: 0 5px 25px rgba(255,0,85,0.65), 0 0 15px rgba(255,0,85,0.5); opacity: 0; transition: 0.3s; z-index: 1000; pointer-events: none; }
 .game-toast.visible { transform: translate(-50%, 0); opacity: 1; }
-
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 999; }
-.modal-overlay.active { display: flex; }
-.modal-card { background: var(--bg-pure); border: 1px solid rgba(255,0,85,0.2); border-radius: 20px; padding: 24px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 10px 50px rgba(0,0,0,0.6), 0 0 30px rgba(255,0,85,0.15); }
-.modal-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 10px; }
-.modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
-.modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 /* 1. Global Scrollbar Styling */
 ::-webkit-scrollbar {
@@ -528,174 +191,4 @@ html, body {
 [style*="overflow: auto"],
 .scrollable { 
     clip-path: inset(0 round 12px); 
-}
-/* ── COIN MODE INJECTED STYLES ── */
-.pill-container {
-    display: flex;
-    gap: 15px;
-    width: 100%;
-    justify-content: center;
-    margin: 20px 0;
-}
-
-.matrix-pill {
-    flex: 1;
-    padding: 25px 15px;
-    border-radius: 20px;
-    border: 2px solid transparent;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.matrix-pill.red {
-    border-color: rgba(255, 0, 85, 0.5);
-    box-shadow: 0 0 15px rgba(255, 0, 85, 0.2);
-}
-
-.matrix-pill.red:active {
-    transform: scale(0.95);
-    background: rgba(255, 0, 85, 0.2);
-}
-
-.matrix-pill.blue {
-    border-color: rgba(0, 240, 255, 0.5);
-    box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
-}
-
-.matrix-pill.blue:active {
-    transform: scale(0.95);
-    background: rgba(0, 240, 255, 0.2);
-}
-
-.matrix-pill .pill-title { font-size: 18px; font-weight: 800; }
-.matrix-pill.red .pill-title { color: var(--neon-pink, #ff0055); }
-.matrix-pill.blue .pill-title { color: var(--neon-cyan, #00f0ff); }
-
-.matrix-pill .pill-sub {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-top: 4px;
-    font-weight: 600;
-}
-
-.coin-stage {
-    perspective: 1000px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 30px 0;
-    width: 100%;
-    height: 180px;
-}
-
-.neon-coin {
-    width: 140px;
-    height: 140px;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 3s cubic-bezier(0.15, 0.85, 0.35, 1.15);
-    cursor: pointer;
-}
-
-.coin-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    backface-visibility: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: 20px;
-    background: rgba(15, 7, 32, 0.9);
-    border: 3px solid var(--neon-pink, #ff0055);
-    box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
-    color: #fff;
-}
-
-.coin-front { transform: rotateY(0deg); color: var(--neon-pink, #ff0055); }
-.coin-back {
-    transform: rotateY(180deg);
-    border-color: var(--neon-cyan, #00f0ff);
-    color: var(--neon-cyan, #00f0ff);
-    box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
-}
-
-.neon-coin.edge-landing {
-    animation: edgePulse 1s infinite alternate;
-}
-
-@keyframes edgePulse {
-    0% { box-shadow: 0 0 20px #ffd700, 0 0 40px #ff0055; }
-    100% { box-shadow: 0 0 40px #00ff66, 0 0 70px #ffd700; }
-}
-
-.coin-outcome-banner {
-    text-align: center;
-    font-size: 22px;
-    font-weight: 900;
-    padding: 12px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-}
-
-.coin-outcome-banner.safe {
-    color: #00ff66;
-    background: rgba(0, 255, 102, 0.1);
-    border: 1px solid #00ff66;
-}
-
-.coin-outcome-banner.busted {
-    color: #ff0055;
-    background: rgba(255, 0, 85, 0.1);
-    border: 1px solid #ff0055;
-}
-
-.coin-outcome-banner.golden {
-    color: #ffd700;
-    background: rgba(255, 215, 0, 0.15);
-    border: 1px solid #ffd700;
-}
-
-.coin-target-pill.selected {
-    border-color: #00ff66 !important;
-    background: rgba(0, 255, 102, 0.15) !important;
-}
-/* ================= COIN MODE: HOST CONTROLS TOGGLE ================= */
-/* Used by CoinMode.setGameMode() to hide classic deck/round pickers while
-   Coin Mode is selected, without touching each child's inline display
-   style (which was the source of leftover blank/black overlay blocks). */
-#hostOnlyControls.coin-mode-active > *:not(#modeSelectionContainer) {
-    display: none !important;
-}
-
-/* ================= COIN MODE: FIDGET LAYOUT ================= */
-/* Reuses the shared .fidget-board / .clicker-btn / .switch-track /
-   .bubble-grid rules defined above; only lays out Coin Mode's 3-toy
-   variant (clicker + switch + a wide bubble grid) across mobile/desktop. */
-.coin-fidget-board {
-    grid-template-columns: 1fr 1fr;
-}
-.coin-fidget-toy-wide {
-    grid-column: span 2;
-}
-.coin-fidget-board .bubble-grid {
-    width: 100%;
-}
-
-@media (min-width: 480px) {
-    .coin-fidget-board {
-        grid-template-columns: 1fr 1fr 1.4fr;
-    }
-    .coin-fidget-toy-wide {
-        grid-column: auto;
-    }
 }

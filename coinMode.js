@@ -5,6 +5,9 @@
 // ── GLOBAL STATE ──
 let TARGET_QUESTIONS_BY_CATEGORY = {}; // Will be populated from target_questions.json
 
+// Testing control: 0 = never, 1 = current odds, 100 = every flip.
+const MATRIX_OVERRIDE_CHANCE_PERCENT = 1;       //0 means turned off, 1 means 1% chance=normal, 100 means every flip is matrix //
+
 // Async function to load your dedicated Coin Mode question database
 async function loadCoinQuestions() {
     try {
@@ -42,15 +45,6 @@ let coinState = {
     roundsInitialized: false
 };
 
-fetch('target_questions.json')
-    .then(res => res.json())
-    .then(data => {
-        if (Array.isArray(data)) {
-            TARGET_QUESTIONS_BY_CATEGORY["Party"] = data.map(q => typeof q === 'string' ? q : q.question);
-        }
-    })
-    .catch(() => {});
-
 // ── SESSION LIFECYCLE HOOK ──
 (function hookLeaveRoomForCoinReset() {
     const originalLeaveRoom = window.leaveRoom;
@@ -66,22 +60,19 @@ fetch('target_questions.json')
 })();
 
 // ── NETWORK INTERCEPTOR ──
-(function hookNetwork() {
-    const originalHandleData = window.handleData;
-    window.handleData = function (data, connection) {
-        if (data && data.type && data.type.startsWith('COIN_')) {
-            CoinMode.handleNetwork(data, connection);
-        } else if (typeof originalHandleData === 'function') {
-            originalHandleData(data, connection);
-        }
-    };
-})();
+// NOTE: routing of COIN_* vs regular messages now happens in game.js's
+// _routeNetworkMessage (registered with networking.js via onNetworkData).
+// A window.handleData-wrapping IIFE used to live here, but script load order
+// (this file loads before game.js defines `handleData`, which - as a
+// top-level function declaration - overwrites window.handleData) meant that
+// wrapper was always silently clobbered and never actually ran. Removed to
+// avoid the dead/misleading code; CoinMode.handleNetwork below is still the
+// entry point game.js calls directly.
 
 // ── COIN MODE ENGINE ──
 const CoinMode = {
-    clickCount: 0,
-
     setGameMode(mode) {
+        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
         room.gameMode = mode; // Integrate with global room state
         const btnClassic = document.getElementById('btnModeClassic');
         const btnCoin = document.getElementById('btnModeCoin');
@@ -117,13 +108,11 @@ const CoinMode = {
             const catBtns = document.querySelectorAll('#coinCategoryPicker .btn-cat');
             catBtns.forEach(b => {
                 b.classList.remove('active');
-                b.style.borderColor = 'rgba(255,255,255,0.2)';
-                b.style.background = 'transparent';
+                b.style.removeProperty('border-color');
+                b.style.removeProperty('background');
             });
             if (catBtns[0]) {
                 catBtns[0].classList.add('active');
-                catBtns[0].style.borderColor = 'var(--neon-cyan, #00f0ff)';
-                catBtns[0].style.background = 'rgba(0, 240, 255, 0.15)';
             }
         }
 
@@ -143,48 +132,52 @@ const CoinMode = {
     },
 
     selectCategory(catName, btnElem) {
+        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
         coinState.selectedCategory = catName;
         document.querySelectorAll('.btn-cat').forEach(b => {
-            b.style.borderColor = 'rgba(255,255,255,0.2)';
-            b.style.background = 'transparent';
+            b.classList.remove('active');
+            b.style.removeProperty('border-color');
+            b.style.removeProperty('background');
         });
         if (btnElem) {
-            btnElem.style.borderColor = 'var(--neon-cyan, #00f0ff)';
-            btnElem.style.background = 'rgba(0, 240, 255, 0.15)';
+            btnElem.classList.add('active');
         }
     },
 
     triggerBotTurn() {
-        if (!coinState.active) return;
+        if (net.role !== 'host' || !coinState.active || typeof Bots === 'undefined') return;
         const currentSub = coinState.subject;
 
-        if (currentSub && currentSub.toLowerCase().includes('bot')) {
+        if (Bots.isBot(currentSub)) {
             setTimeout(() => {
-                const candidates = room.players.filter(p => p !== currentSub);
-                const target = candidates[Math.floor(Math.random() * candidates.length)];
+                if (!coinState.active || coinState.subject !== currentSub) return;
+                const target = Bots.chooseOtherPlayer(room.players, currentSub);
+                if (!target) return;
                 coinState.targetPlayer = target;
                 
                 broadcastToAll({ type: 'COIN_TARGET_SELECTED', targetPlayer: target });
                 
                 setTimeout(() => {
                     broadcastToAll({ type: 'COIN_ADVANCE_MATRIX' });
-                }, 1500);
-            }, 1200);
+                }, Bots.decisionDelay());
+            }, Bots.decisionDelay());
         }
     },
 
     triggerBotMatrixTurn() {
+        if (net.role !== 'host' || typeof Bots === 'undefined') return;
         const currentSub = coinState.subject;
-        if (currentSub && currentSub.toLowerCase().includes('bot')) {
+        if (Bots.isBot(currentSub)) {
             setTimeout(() => {
-                const side = Math.random() > 0.5 ? 'heads' : 'tails';
+                if (!coinState.active || coinState.subject !== currentSub) return;
+                const side = Bots.chooseSide();
                 coinState.chosenSide = side;
                 broadcastToAll({ type: 'COIN_SIDE_CHOSEN', side: side });
 
                 setTimeout(() => {
                     this.triggerCoinFlip();
-                }, 1200);
-            }, 1200);
+                }, Bots.decisionDelay());
+            }, Bots.decisionDelay());
         }
     },
 
@@ -269,6 +262,7 @@ const CoinMode = {
 
     selectTargetPlayer(playerName) {
         if (net.myName !== coinState.subject) return;
+        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
 
         coinState.targetPlayer = playerName;
         if (typeof Sound !== 'undefined') Sound.play(320, 'sine', 0.08);
@@ -300,8 +294,7 @@ const CoinMode = {
         const payload = {
             type: 'COIN_SILENT_BROADCAST',
             subject: coinState.subject,
-            targetPlayer: coinState.targetPlayer,
-            question: coinState.question
+            targetPlayer: coinState.targetPlayer
         };
 
         if (net.role === 'host') broadcastToAll(payload);
@@ -311,6 +304,7 @@ const CoinMode = {
     },
 
     advanceToMatrixPhase() {
+        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
         const payload = { type: 'COIN_ADVANCE_MATRIX' };
         if (net.role === 'host') broadcastToAll(payload);
         else net.conn.send(payload);
@@ -318,6 +312,7 @@ const CoinMode = {
 
     choosePillSide(side) {
         if (net.myName !== coinState.subject) return;
+        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
         coinState.chosenSide = side;
 
         const payload = { type: 'COIN_SIDE_CHOSEN', side: side };
@@ -326,9 +321,10 @@ const CoinMode = {
     },
 
     triggerCoinFlip() {
+        if (typeof Vibrate !== 'undefined' && Vibrate.coinFlip) Vibrate.coinFlip();
         const roll = Math.random() * 100;
         let result = 'heads';
-        if (roll < 1.0) result = 'edge';
+        if (roll < MATRIX_OVERRIDE_CHANCE_PERCENT) result = 'edge';
         else if (roll < 50.5) result = 'heads';
         else result = 'tails';
 
@@ -341,40 +337,10 @@ const CoinMode = {
         else if (net.conn) net.conn.send(payload);
     },
 
-    handleFidgetClick(elem) {
-        this.clickCount++;
-        elem.innerText = this.clickCount;
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play(400 + (this.clickCount % 10) * 20, 'triangle', 0.05);
-        if (typeof Vibrate !== 'undefined' && Vibrate.tap) Vibrate.tap();
-    },
-
-    handleFidgetToggle(elem) {
-        elem.classList.toggle('on');
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play(150, 'sine', 0.05);
-        if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
-    },
-
-    setupFidgetBubbles() {
-        const grid = document.getElementById('coinToyBubbleGrid');
-        if (!grid) return;
-        grid.innerHTML = '';
-        for (let i = 0; i < 8; i++) {
-            const b = document.createElement('div');
-            b.className = 'bubble';
-            b.onclick = () => {
-                if (b.classList.contains('popped')) return;
-                b.classList.add('popped');
-                if (typeof Sound !== 'undefined' && Sound.play) Sound.play(600, 'sine', 0.02);
-                if (typeof Vibrate !== 'undefined' && Vibrate.pop) Vibrate.pop();
-                setTimeout(() => b.classList.remove('popped'), 3000);
-            };
-            grid.appendChild(b);
-        }
-    },
-
     handleNetwork(data) {
         switch (data.type) {
             case 'COIN_START_ROUND':
+                coinState.active = true;
                 coinState.subject = data.subject;
                 coinState.question = data.question;
                 if (data.roundCount) room.roundCount = data.roundCount;
@@ -392,7 +358,7 @@ const CoinMode = {
             case 'COIN_SILENT_BROADCAST':
                 const modal = document.getElementById('coinSilentBroadcastModal');
                 const content = document.getElementById('coinSilentModalContent');
-                content.innerText = ` ${data.subject} selected ${data.targetPlayer} for prompt:\n\n"${data.question}"`;
+                content.innerText = ` ${data.subject} selected ${data.targetPlayer}.`;
                 modal.classList.add('active');
                 break;
 
@@ -419,6 +385,7 @@ const CoinMode = {
 
     renderPhase1() {
         const isSubject = (net.myName === coinState.subject);
+        document.getElementById('coinEasterEggModal').classList.remove('active');
         document.getElementById('coinSubjectSelectionBox').style.display = isSubject ? 'block' : 'none';
         document.getElementById('coinNonSubjectWaitingBox').style.display = isSubject ? 'none' : 'block';
 
@@ -432,7 +399,7 @@ const CoinMode = {
                 pill.className = 'player-pill coin-target-pill';
                 pill.dataset.player = p;
                 pill.innerText = p;
-                pill.onclick = () => this.selectTargetPlayer(p);
+                pill.onclick = () => Buttons.coinTarget(p);
                 grid.appendChild(pill);
             });
             document.getElementById('coinContinueBtn').style.display = 'none';
@@ -441,12 +408,7 @@ const CoinMode = {
             document.getElementById('coinWaitSubjectName').innerText = coinState.subject;
             document.getElementById('coinWaitTargetLabel').innerText = "Waiting for selection...";
 
-            this.clickCount = 0;
-            const clicker = document.getElementById('coinToyClicker');
-            if (clicker) clicker.innerText = '0';
-            const toggle = document.getElementById('coinToyToggle');
-            if (toggle) toggle.classList.remove('on');
-            this.setupFidgetBubbles();
+            Fidget.setup({ clickerId: 'coinToyClicker', toggleId: 'coinToyToggle', bubbleGridId: 'coinToyBubbleGrid' });
         }
         if (typeof showScreen === 'function') showScreen('scrCoinPhase1');
     },
@@ -473,7 +435,7 @@ const CoinMode = {
         if (isSubject) {
             tapPrompt.innerText = "TAP THE COIN TO FLIP!";
             coin.style.pointerEvents = 'auto';
-            coin.onclick = () => this.triggerCoinFlip();
+            coin.onclick = () => Buttons.coinFlip();
         } else {
             tapPrompt.innerText = `Waiting for ${coinState.subject} to flip...`;
             coin.style.pointerEvents = 'none';
@@ -511,8 +473,13 @@ const CoinMode = {
             card.style.display = 'block';
             card.innerText = ` SECRET PROTECTED BY THE MATRIX!`;
 
-            if (net.myName === coinState.subject) {
-                setTimeout(() => this.openEasterEggModal(), 1000);
+            if (net.myName === coinState.subject && coinState.flipResult === 'edge') {
+                setTimeout(() => {
+                    const modal = document.getElementById('coinEasterEggModal');
+                    if (coinState.flipResult === 'edge' && !modal.classList.contains('active')) {
+                        this.openEasterEggModal();
+                    }
+                }, 1000);
             }
         } else if (safe) {
             banner.className = 'coin-outcome-banner safe';
@@ -528,7 +495,7 @@ const CoinMode = {
 
         if (net.role === 'host') {
             nextBtn.style.display = 'block';
-            nextBtn.onclick = () => CoinMode.startRound();
+            nextBtn.onclick = () => Buttons.coinNextRound();
         } else {
             nextBtn.style.display = 'none';
         }
@@ -538,17 +505,20 @@ const CoinMode = {
         const grid = document.getElementById('coinEasterEggPlayerGrid');
         grid.innerHTML = '';
         room.players.forEach(p => {
+            if (p === coinState.subject) return;
             const btn = document.createElement('button');
             btn.className = 'btn-secondary';
             btn.style.margin = '4px';
             btn.innerText = p;
-            btn.onclick = () => {
-                const payload = { type: 'COIN_SET_NEXT_SUBJECT', nextSubject: p };
-                if (net.role === 'host') window.handleData(payload, null);
-                else net.conn.send(payload);
-            };
+            btn.onclick = () => Buttons.coinOverrideSubject(p);
             grid.appendChild(btn);
         });
+        const randomBtn = document.createElement('button');
+        randomBtn.className = 'btn-main';
+        randomBtn.style.margin = '4px';
+        randomBtn.innerText = 'Random Subject';
+        randomBtn.onclick = () => Buttons.coinOverrideSubject(null);
+        grid.appendChild(randomBtn);
         document.getElementById('coinEasterEggModal').classList.add('active');
     }
 };

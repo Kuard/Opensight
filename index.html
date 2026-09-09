@@ -16,13 +16,43 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="cards.css">
+    <link rel="stylesheet" href="fidget.css">
+    <link rel="stylesheet" href="coinmode.css">
+    <link rel="stylesheet" href="buttons.css">
 </head>
-<!-- COIN MODE MODALS (Add right before </body>) -->
+
+<body>
+
+<div class="app-container">
+
+<div class="modal-overlay" id="confirmLeaveModal">
+    <div class="modal-card">
+        <div class="modal-title">Leave room?</div>
+        <div class="modal-desc">Your current game session will end for this device.</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissLeaveConfirmation()">Stay</button>
+            <button class="btn-main" onclick="confirmLeaveRoom()">Leave</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="confirmNSFWModal">
+    <div class="modal-card">
+        <div class="modal-title">18+ deck</div>
+        <div class="modal-desc">This deck contains adult prompts. Continue?</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
+            <button class="btn-main" onclick="acceptNSFWConfirmation()">Continue</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="coinSilentBroadcastModal">
     <div class="modal-card">
         <div class="modal-title" style="color: var(--neon-cyan, #00f0ff);"> ANSWER REVEALED</div>
         <div id="coinSilentModalContent" style="margin: 15px 0; font-size: 15px; font-weight: 600; text-align: center;"></div>
-        <button class="btn-main" style="padding: 10px;" onclick="document.getElementById('coinSilentBroadcastModal').classList.remove('active')">Got it!</button>
+        <button class="btn-main" style="padding: 10px;" onclick="window.Vibrate && window.Vibrate.click(); document.getElementById('coinSilentBroadcastModal').classList.remove('active')">Got it!</button>
     </div>
 </div>
 
@@ -33,19 +63,16 @@
         <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
     </div>
 </div>
-<body>
 
-<div class="app-container">
-<!-- COIN MODE SCREENS (Add inside .app-container) -->
 <div class="screen" id="scrCoinPhase1">
     <div class="lobby-header">
         <div class="circle-btn" style="opacity:0;"></div>
         <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">COIN MODE</div>
-        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()">✕</div>
+        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
     </div>
 
     <div id="coinSubjectSelectionBox" style="display:none; width:100%;">
-        <div class="brand-subtitle" style="text-align:center;">Read scenario & pick a target player:</div>
+            <div class="brand-subtitle" style="text-align:center;">Read scenario & pick a target player:</div>
         <div class="prompt-box" style="margin: 12px 0;"><div class="prompt-text" id="coinPromptDisplay">...</div></div>
         <div class="section-title">Select Target Player</div>
         <div id="coinTargetPlayerGrid" class="deck-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px;"></div>
@@ -66,11 +93,12 @@
         <div class="sub-track" id="coinWaitTargetLabel" style="text-align:center; color: var(--neon-pink, #ff0055); margin: 10px 0; font-weight:700;">Waiting...</div>
         
         <div class="fidget-board coin-fidget-board">
-            <div class="fidget-toy"><div class="clicker-btn" id="coinToyClicker" onclick="CoinMode.handleFidgetClick(this)">0</div></div>
-            <div class="fidget-toy"><div class="switch-track" id="coinToyToggle" onclick="CoinMode.handleFidgetToggle(this)"><div class="switch-handle"></div></div></div>
+            <div class="fidget-toy"><div class="clicker-btn" id="coinToyClicker">0</div></div>
+            <div class="fidget-toy"><div class="switch-track" id="coinToyToggle"><div class="switch-handle"></div></div></div>
             <div class="fidget-toy coin-fidget-toy-wide"><div class="bubble-grid" id="coinToyBubbleGrid"></div></div>
         </div>
     </div>
+
 </div>
 
 <div class="screen" id="scrCoinPhase2" style="justify-content: center;">
@@ -80,11 +108,11 @@
     </div>
     <div id="coinMatrixSubjectControls" style="display:none; width:100%;">
         <div class="pill-container">
-            <button class="matrix-pill red" onclick="CoinMode.choosePillSide('heads')">
+            <button class="matrix-pill red" onclick="Buttons.coinSide('heads')">
                 <div class="pill-title">HEADS </div>
                 <div class="pill-sub">RED</div>
             </button>
-            <button class="matrix-pill blue" onclick="CoinMode.choosePillSide('tails')">
+            <button class="matrix-pill blue" onclick="Buttons.coinSide('tails')">
                 <div class="pill-title">TAILS</div>
                 <div class="pill-sub">BLUE</div>
             </button>
@@ -97,7 +125,7 @@
     <div class="lobby-header">
         <div class="circle-btn" style="opacity:0;"></div>
         <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">THE FLIP</div>
-        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()">✕</div>
+        <div class="circle-btn" onclick="triggerLeaveConfirmation && triggerLeaveConfirmation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
     </div>
     <div class="brand-subtitle" id="coinTapInstruction" style="text-align:center; margin-bottom: 10px;">TAP COIN TO FLIP</div>
     <div class="coin-stage">
@@ -111,15 +139,6 @@
     <button class="btn-main" id="coinNextRoundBtn" style="display:none; margin-top:auto;">Next Coin Round</button>
 </div>
 
-
-
-<div class="modal-overlay" id="coinEasterEggModal">
-    <div class="modal-card" style="border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);">
-        <div class="modal-title" style="color: #ffd700;"> MATRIX OVERRIDE </div>
-        <div class="modal-desc">The coin landed on its edge! Choose who becomes the next Subject.</div>
-        <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
-    </div>
-</div>
     <div class="screen active" id="scrMenu" style="justify-content: center;">
         <div class="brand-header" style="text-align: center; margin-bottom: 30px;">
             <div class="brand-title" style="font-size: 24px;">INSIGHT</div>
@@ -127,7 +146,7 @@
         </div>
         <input type="text" class="input-field" id="menuNameInput" placeholder="Your Nickname" maxlength="12">
         <button class="btn-main" onclick="createLiveRoom()">Host New Game</button>
-        <button class="btn-secondary" onclick="showScreen('scrJoin')">Join a Room</button>
+        <button class="btn-secondary" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrJoin')">Join a Room</button>
     </div>
 
     <div class="screen" id="scrJoin" style="justify-content: center;">
@@ -137,7 +156,7 @@
         </div>
         <input type="text" class="input-field room-code-input" id="joinRoomInput" placeholder="XXXX" maxlength="4" style="text-transform: uppercase;">
         <button class="btn-main" onclick="joinLiveRoom()">Connect to Lobby</button>
-        <button class="btn-secondary" onclick="showScreen('scrMenu')">Back</button>
+        <button class="btn-secondary" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrMenu')">Back</button>
     </div>
 
     <div class="screen" id="scrLobby">
@@ -154,7 +173,7 @@
         <div class="room-section">
             <div class="brand-subtitle">Share this Room ID with your friends</div>
             <div class="room-code-display" id="lobbyIdLabel">⌛</div>
-            <button class="btn-outline" onclick="navigator.clipboard.writeText(document.getElementById('lobbyIdLabel').innerText)">
+            <button class="btn-outline" onclick="window.Vibrate && window.Vibrate.click(); navigator.clipboard.writeText(document.getElementById('lobbyIdLabel').innerText)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 Copy Room ID
             </button>
@@ -168,34 +187,42 @@
         <div id="lobbyPlayerGrid"></div> 
 
         <div id="hostOnlyControls" style="display:none;">
-            <!-- COMPACT MODE WIDGET (Moved from coinMode.js) -->
-<div id="modeSelectionContainer" style="margin: 8px 0; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-    <div class="section-title" style="font-size: 11px; margin-bottom: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-align: center;">GAME MODE</div>
-    
-    <div style="display: flex; gap: 6px;">
-        <button type="button" class="btn-secondary active" id="btnModeClassic" onclick="CoinMode.setGameMode('classic')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-pink, #ff0055);">Classic</button>
-        <button type="button" class="btn-secondary" id="btnModeCoin" onclick="CoinMode.setGameMode('coin')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-cyan, #00f0ff);"> Coin Mode</button>
-    </div>
+            <div id="modeSelectionContainer" style="margin: 8px 0; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <div class="section-title" style="font-size: 11px; margin-bottom: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-align: center;">GAME MODE</div>
+                
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn-secondary active" id="btnModeClassic" onclick="CoinMode.setGameMode('classic')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-pink, #ff0055);">Classic</button>
+                    <button type="button" class="btn-secondary" id="btnModeCoin" onclick="CoinMode.setGameMode('coin')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-cyan, #00f0ff);"> Coin Mode</button>
+                </div>
 
-    <!-- COMPACT CATEGORY PICKER FOR COIN MODE -->
-    <div id="coinCategoryPicker" style="display: none; margin-top: 10px;">
-        <div style="display: flex; gap: 4px;">
-            <button type="button" class="btn-secondary btn-cat active" onclick="CoinMode.selectCategory('Party', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Party</button>
-            <button type="button" class="btn-secondary btn-cat" onclick="CoinMode.selectCategory('Spicy', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Spicy</button>
-            <button type="button" class="btn-secondary btn-cat" onclick="CoinMode.selectCategory('Deep', this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">Deep</button>
-        </div>
-    </div>
+                <div id="coinCategoryPicker" style="display: none; margin-top: 10px;">
+                    <div class="section-title">Choose Your Deck</div>
+                    <div class="deck-grid coin-deck-grid">
+                        <div class="deck-pill btn-cat active" onclick="CoinMode.selectCategory('Party', this)">
+                            <div class="deck-icon icon-mask"></div>
+                            <div class="deck-title">Party</div><div class="deck-subtitle">Timeless</div>
+                        </div>
+                        <div class="deck-pill btn-cat" onclick="CoinMode.selectCategory('Spicy', this)">
+                            <div class="deck-icon icon-pepper"></div>
+                            <div class="deck-title">Spicy</div><div class="deck-subtitle">Hot takes</div>
+                        </div>
+                        <div class="deck-pill btn-cat" onclick="CoinMode.selectCategory('Deep', this)">
+                            <div class="deck-icon icon-brain"></div>
+                            <div class="deck-title">Deep</div><div class="deck-subtitle">Get real</div>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- COMPACT ROUND LIMITER FOR COIN MODE (10 / 20 / 30) -->
-    <div id="coinRoundPicker" style="display: none; margin-top: 10px;">
-        <div style="font-size: 10px; margin-bottom: 6px; color: rgba(255,255,255,0.4); letter-spacing: 0.5px; text-align: center;">ROUNDS</div>
-        <div style="display: flex; gap: 4px;">
-            <button type="button" class="btn-secondary btn-coin-round active" id="coinRoundPill10" onclick="CoinMode.setCoinMaxRounds(10, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">10</button>
-            <button type="button" class="btn-secondary btn-coin-round" id="coinRoundPill20" onclick="CoinMode.setCoinMaxRounds(20, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">20</button>
-            <button type="button" class="btn-secondary btn-coin-round" id="coinRoundPill30" onclick="CoinMode.setCoinMaxRounds(30, this)" style="flex: 1; padding: 6px 2px; font-size: 11px;">30</button>
-        </div>
-    </div>
-</div>
+                <div id="coinRoundPicker" style="display: none; margin-top: 10px;">
+                    <div class="section-title">Game Length</div>
+                    <div class="round-grid coin-round-grid">
+                        <div class="round-pill btn-coin-round active" id="coinRoundPill10" onclick="CoinMode.setCoinMaxRounds(10, this)"><div class="round-val">10</div><div class="round-sub">Rounds</div></div>
+                        <div class="round-pill btn-coin-round" id="coinRoundPill20" onclick="CoinMode.setCoinMaxRounds(20, this)"><div class="round-val">20</div><div class="round-sub">Rounds</div></div>
+                        <div class="round-pill btn-coin-round" id="coinRoundPill30" onclick="CoinMode.setCoinMaxRounds(30, this)"><div class="round-val">30</div><div class="round-sub">Rounds</div></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="classicOnlyControls">
             <div class="section-title">Choose Your Deck</div>
             <div class="deck-grid">
@@ -248,7 +275,7 @@
             </div>
         </div>
 
-        <button class="btn-main" id="hostStartBtn" style="display:none; margin-top:20px;" onclick="broadcastStartRound()">Start Game</button>
+        <button class="btn-main" id="hostStartBtn" style="display:none; margin-top:20px;" onclick="window.Vibrate && window.Vibrate.click(); broadcastStartRound()">Start Game</button>
         <p class="sub-track" id="clientWaitNotice" style="display:none; text-align:center; padding:20px 0; color: var(--neon-pink);">WAITING FOR HOST...</p>
     </div>
 
@@ -258,34 +285,35 @@
             <div class="brand-title">THE TARGET</div>
             <div class="circle-btn" onclick="triggerLeaveConfirmation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
         </div>
-        <div class="brand-subtitle" style="text-align:center; margin-bottom: 20px;">Players are writing about you...</div>
-        
-        <div class="prompt-box"><div class="prompt-text" id="subjectPromptLabel">...</div></div>
-        <div class="timer-display" id="subjectTimerLabel" style="text-align:center; font-size:32px; font-weight:800; color:var(--neon-pink); margin: 20px 0;">0:45</div>
-        
+        <div class="brand-subtitle" style="text-align:center; margin-bottom: 12px;">Players are writing about you...</div>
+        <div class="prompt-box" id="subjectPromptBox">
+            <div class="prompt-text" id="subjectPromptLabel">...</div>
+        </div>
+        <div class="sub-track" id="submissionTrackLabel" style="text-align:center; margin-bottom: 8px;">0 cards locked in...</div>
         <div class="fidget-board">
             <div class="fidget-toy"><div class="clicker-btn" id="toyClicker">0</div></div>
             <div class="fidget-toy"><div class="switch-track" id="toyToggle"><div class="switch-handle"></div></div></div>
             <div class="fidget-toy" style="grid-column: span 2;"><div class="bubble-grid" id="toyBubbleGrid"></div></div>
         </div>
-        
-        <div class="sub-track" id="submissionTrackLabel" style="text-align:center; margin-top:auto; color:var(--text-secondary);">0 cards locked in...</div>
     </div>
 
     <div class="screen" id="scrWriterInput">
         <div class="lobby-header">
             <div class="circle-btn" style="opacity: 0;"></div>
-            <div class="brand-title" id="writerCategoryLabel" style="color:var(--neon-pink);">CATEGORY</div>
+            <div class="brand-title" id="writerCategoryLabel">PARTY</div>
             <div class="circle-btn" onclick="triggerLeaveConfirmation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
         </div>
-        
-        <div class="prompt-box"><div class="prompt-text" id="activePromptLabel">...</div></div>
-        <div class="timer-display" id="writerTimerLabel" style="text-align:center; font-size:32px; font-weight:800; color:var(--neon-green); margin: 20px 0;">0:45</div>
-        
-        <textarea class="input-field" id="writerInput" placeholder="Type your answer..." rows="3" style="resize:none; min-height:80px; margin-bottom: 8px;"></textarea>
-        <div style="text-align:right; font-size:11px; color:var(--text-secondary); margin-bottom: 20px;" id="charCount">0 / 120 words</div>
-        
-        <button class="btn-main" id="lockInBtn" onclick="submitWriterCard()" style="margin-top:auto;">Lock In Card</button>
+
+        <div class="prompt-box">
+            <div class="prompt-text" id="activePromptLabel">...</div>
+        </div>
+
+        <div class="timer-display">0:45</div>
+
+        <textarea class="card-textarea" id="writerInput" placeholder="Write your answer..." maxlength="500"></textarea>
+        <div class="char-count" id="charCount">0 / 120 words</div>
+
+        <button class="btn-main" id="lockInBtn" onclick="submitWriterCard()">Lock In Card</button>
     </div>
 
     <div class="screen" id="scrRevealStage">
@@ -294,89 +322,29 @@
             <div class="brand-title">THE REVEAL</div>
             <div class="circle-btn" onclick="triggerLeaveConfirmation()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></div>
         </div>
-        
-        <div class="brand-subtitle" id="revealInstructions" style="text-align:center;">...</div>
-        <div class="prompt-box"><div class="prompt-text" id="revealPromptLabel">...</div></div>
-        
-        <div class="cards-stack fanned-hand" id="cardsWrapper">
+
+        <div class="prompt-box">
+            <div class="prompt-text" id="revealPromptLabel">...</div>
         </div>
-        <button class="btn-main" id="nextRoundBtn" style="display:none;">Next Round</button>
+
+        <p class="brand-subtitle" id="revealInstructions" style="text-align:center;">Swipe/Tap to reveal</p>
+
+        <div id="cardsWrapper"></div>
+
+        <button class="btn-main" id="nextRoundBtn" style="display:none; margin-top:20px;">Next Round</button>
     </div>
 
 </div>
 
-<div class="modal-overlay" id="confirmLeaveModal">
-    <div class="modal-card">
-        <div class="modal-title">Abandon Match?</div>
-        <div class="modal-desc">Are you sure you want to exit? You will disconnect from your group and lose current progress.</div>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="dismissLeaveConfirmation()">Cancel</button>
-            <button class="btn-main" onclick="confirmLeaveRoom()">Leave</button>
-        </div>
-    </div>
-</div>
-
-<div class="modal-overlay" id="confirmNSFWModal">
-    <div class="modal-card">
-        <div class="modal-title">18+ Content Warning</div>
-        <div class="modal-desc">The NSFW category contains extreme and sensitive content. Are you sure you want to proceed?</div>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
-            <button class="btn-main" onclick="acceptNSFWConfirmation()">Proceed</button>
-        </div>
-    </div>
-</div>
-
-<script src="game.js"></script>
+<script src="vibrations.js"></script>
+<script src="networking.js"></script>
+<script src="cards.js"></script>
+<script src="bots.js"></script>
+<script src="fidget.js"></script>
+<script src="buttons.js"></script>
 <script src="coinMode.js"></script>
-
-<!-- FIDGET TOYS JAVASCRIPT INJECTION -->
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Clicker Button Logic
-        const clk = document.getElementById('toyClicker');
-        if (clk) {
-            clk.onclick = () => {
-                const n = parseInt(clk.innerText) + 1;
-                clk.innerText = n;
-                if (typeof Sound !== 'undefined' && Sound.play) {
-                    Sound.play(400 + (n % 10) * 20, 'triangle', 0.05);
-                }
-            };
-        }
-
-        // 2. Switch Toggle Logic
-        const tgl = document.getElementById('toyToggle');
-        if (tgl) {
-            tgl.onclick = () => {
-                tgl.classList.toggle('on');
-                if (typeof Sound !== 'undefined' && Sound.play) {
-                    Sound.play(150, 'sine', 0.05);
-                }
-            };
-        }
-
-        // 3. Bubble Pop Logic
-        const bGrid = document.getElementById('toyBubbleGrid');
-        if (bGrid) {
-            bGrid.innerHTML = "";
-            for (let i = 0; i < 8; i++) {
-                const b = document.createElement('div');
-                b.className = "bubble";
-                b.onclick = () => {
-                    if (!b.classList.contains('popped')) {
-                        b.classList.add('popped');
-                        if (typeof Sound !== 'undefined' && Sound.play) {
-                            Sound.play(600, 'sine', 0.02);
-                        }
-                        setTimeout(() => b.classList.remove('popped'), 3000);
-                    }
-                };
-                bGrid.appendChild(b);
-            }
-        }
-    });
-</script>
+<script src="game.js"></script>
+<script src="players.js"></script>
 
 </body>
 </html>
