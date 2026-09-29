@@ -324,9 +324,9 @@ function handleData(data, connection) {
             const winner = room.cards[data.index].creator;
             room.scores[winner] = (room.scores[winner] || 0) + 1;
             broadcastToAll({ type: 'SYNC_SCORES', scores: room.scores });
-            if (connection) {
-                try { connection.send(data); } catch(e){} 
-            }
+            // Tell every client which card was picked, not just whoever sent it -
+            // this was previously echoed back to the originating connection only.
+            broadcastToConnections(data);
         }
         
         if ($('scrRevealStage').classList.contains('active')) {
