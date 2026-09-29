@@ -174,44 +174,50 @@ function showToast(msg) {
 // ── NETWORK MESSAGE HANDLING ─────────────────────────────────────────────────
 function handleData(data, connection) {
     if (data.type === 'JOIN' && net.role === 'host') {
-        // A reconnecting player sends JOIN again with their existing name over
-        // a brand-new connection object. Treat that as a resync, not a clash:
-        // replace the stale/dead connection entry for that name instead of
-        // rejecting as NAME_TAKEN.
-        const isKnownName = room.players.includes(data.name);
-        if (isKnownName) {
-            net.connections = net.connections.filter(c => c._kickName !== data.name || c === connection);
-        } else {
-            room.players.push(data.name);
+        if (!connection) return; // a JOIN only ever arrives over a real connection
+
+        // Identity comes from the Insight Player ID in the handshake - never from the
+        // display name. attachPlayerConnection() (networking.js) says whether this ID
+        // is a player we already have (REJOIN) or a new one (JOIN).
+        const who = attachPlayerConnection(connection, data.playerId, data.name);
+        const label = who.label;
+
+        // Tell the client which label it plays under (may differ from the typed name if
+        // that name was already taken) and whether the host recognised it.
+        connection.send({ type: 'JOIN_ACK', label, playerId: who.playerId, rejoined: who.rejoined });
+
+        if (who.rejoined) {
+            // Same player on a new connection. Nothing about the game changes: same roster
+            // entry, score, role, submission and round membership. Explicitly NOT the
+            // late-join path (no lateJoiners entry, no CATCH_UP, no PLAYER_JOINED_LATE).
+            if (!(label in room.scores)) room.scores[label] = 0;
+            if (room.gameMode !== 'coin') connection.send(buildRejoinSync(label));
+            broadcastToAll({ type: 'PLAYER_STATUS', name: label, status: 'rejoined' });
+            return;
         }
 
-        if (!(data.name in room.scores)) room.scores[data.name] = 0;
-
-        if (connection) {
-            connection._kickName = data.name;
-            if (!net.connections.includes(connection)) net.connections.push(connection);
-        }
+        // Genuinely new player.
+        room.players.push(label);
+        if (!(label in room.scores)) room.scores[label] = 0;
 
         if (room.roundActive) {
-            if (!room.lateJoiners.includes(data.name)) room.lateJoiners.push(data.name);
+            if (!room.lateJoiners.includes(label)) room.lateJoiners.push(label);
 
-            if (connection) {
-                connection.send({
-                    type: 'CATCH_UP',
-                    subject: room.currentSubject,
-                    prompt: room.currentPrompt,
-                    category: room.currentCategory,
-                    cards: room.cards,           
-                    scores: room.scores,
-                    lateJoiners: room.lateJoiners,
-                    maxRounds: room.maxRounds,
-                    roundCount: room.roundCount
-                });
-            }
+            connection.send({
+                type: 'CATCH_UP',
+                subject: room.currentSubject,
+                prompt: room.currentPrompt,
+                category: room.currentCategory,
+                cards: room.cards,
+                scores: room.scores,
+                lateJoiners: room.lateJoiners,
+                maxRounds: room.maxRounds,
+                roundCount: room.roundCount
+            });
 
             broadcastToAll({
                 type: 'PLAYER_JOINED_LATE',
-                name: data.name,
+                name: label,
                 players: room.players,
                 lateJoiners: room.lateJoiners,
                 scores: room.scores
@@ -340,10 +346,6 @@ function handleData(data, connection) {
         if (data.lateJoiners !== undefined) room.lateJoiners = data.lateJoiners;
         executeGameOverUI();
     }
-    else if (data.type === 'NAME_TAKEN') {
-        leaveRoom();
-        alert("That nickname is already taken in this room. Please choose a different name.");
-    }
     else if (data.type === 'KICKED') {
         leaveRoom();
         alert("You were removed from the room by the host.");
@@ -372,6 +374,58 @@ function handleData(data, connection) {
         `;
         showScreen('scrRevealStage');
     }
+    else if (data.type === 'REJOIN_SYNC') {
+        // Host's authoritative snapshot for a player it recognised by Player ID. Applied
+        // idempotently, so it works both after a brief drop (local state still there) and
+        // after a page reload (local state gone).
+        if (net.role === 'host') return;
+        if (data.label) net.myName = data.label;
+
+        const onWriteScreen = $('scrWriterInput').classList.contains('active') ||
+                              $('scrSubjectLounge').classList.contains('active');
+        const sameRound = onWriteScreen && room.roundCount === data.roundCount && room.currentPrompt === data.prompt;
+
+        room.players         = data.players || room.players;
+        room.currentSubject  = data.subject;
+        room.currentPrompt   = data.prompt;
+        room.currentCategory = data.category;
+        if (data.gameMode) room.gameMode = data.gameMode;
+        room.playedQuestions = data.playedQuestions || [];
+        room.cards           = data.cards || [];
+        room.scores          = data.scores || {};
+        room.lateJoiners     = data.lateJoiners || [];
+        if (data.maxRounds !== undefined) room.maxRounds = data.maxRounds;
+        if (data.roundCount !== undefined) room.roundCount = data.roundCount;
+        room.roundActive     = (data.phase === 'writing');
+
+        if (data.phase === 'writing') {
+            if (room.lateJoiners.includes(net.myName)) {
+                // Joined late this round and dropped: still a spectator until next round.
+                handleData({
+                    type: 'CATCH_UP', subject: data.subject, prompt: data.prompt, category: data.category,
+                    cards: [], scores: data.scores, lateJoiners: data.lateJoiners,
+                    maxRounds: data.maxRounds, roundCount: data.roundCount
+                }, null);
+            } else {
+                restoreWritingScreen(sameRound, !!data.hasSubmitted, data.cardCount || 0, data.totalWriters || 0);
+            }
+        } else if (data.phase === 'reveal') {
+            renderRevealStage();
+        } else if (data.phase === 'gameover') {
+            executeGameOverUI();
+        } else {
+            if (typeof updateLobbyUI === 'function') updateLobbyUI();
+            showScreen('scrLobby');
+        }
+    }
+    else if (data.type === 'PLAYER_STATUS') {
+        if (data.name === net.myName) return;
+        if (data.status === 'disconnected') showToast(`${data.name} disconnected`);
+        else if (data.status === 'rejoined') {
+            showToast(`${data.name} rejoined`);
+            if (typeof Vibrate !== 'undefined' && Vibrate.tap) Vibrate.tap();
+        }
+    }
     else if (data.type === 'PLAYER_JOINED_LATE') {
         room.players    = data.players;
         room.lateJoiners = data.lateJoiners || room.lateJoiners;
@@ -384,10 +438,16 @@ function handleData(data, connection) {
 
 // ── NETWORK STATUS HANDLING (connection lifecycle, not game messages) ───────
 function handleNetworkStatus(status, detail) {
-    if (status === 'player-left' && net.role === 'host') {
-        // A connection died (crash/close/error) without a clean KICKED flow.
-        // Prune them from the roster so a dead connection never lingers as a
-        // "connected" player, then let everyone know.
+    if (status === 'player-disconnected' && net.role === 'host') {
+        // Connection dropped. The player keeps their seat, score and round state during
+        // the grace period (networking.js); everyone just gets told.
+        const name = detail && detail.name;
+        if (name && room.players.includes(name)) {
+            broadcastToAll({ type: 'PLAYER_STATUS', name, status: 'disconnected' });
+        }
+    } else if (status === 'player-left' && net.role === 'host') {
+        // Grace period expired (or the player left on purpose). Only now is the player
+        // pruned from the roster.
         const name = detail && detail.name;
         if (name && room.players.includes(name)) {
             room.players = room.players.filter(p => p !== name);
@@ -404,12 +464,17 @@ function handleNetworkStatus(status, detail) {
                 lateJoiners: room.lateJoiners
             });
             if (typeof updateLobbyUI === 'function') updateLobbyUI();
-            showToast(`${name} disconnected`);
+            showToast(`${name} left the game`);
         }
     } else if (status === 'disconnected' && net.role === 'client') {
         showToast('Connection lost. Reconnecting...');
     } else if (status === 'connected' && net.role === 'client') {
-        showToast('Reconnected!');
+        showToast(detail && detail.rejoined === false
+            ? 'You were removed while offline - rejoined as a new player'
+            : 'Reconnected!');
+    } else if (status === 'replaced' && net.role === 'client') {
+        leaveRoom();
+        alert("You joined this room from another tab or device, so this session was closed.");
     } else if (status === 'reconnect-failed' && net.role === 'client') {
         showToast('Could not reconnect. Please rejoin the room.');
     }
@@ -444,6 +509,62 @@ if (typeof onNetworkData === 'function') {
     _wireNetworkCallbacks();
 } else {
     document.addEventListener('DOMContentLoaded', _wireNetworkCallbacks);
+}
+
+// ── REJOIN SNAPSHOT (host -> a recognised returning player) ───────────────────
+// Phase is derived from what the host is actually showing/doing; classic mode only.
+function buildRejoinSync(label) {
+    let phase = 'lobby';
+    if (room.roundActive) {
+        phase = 'writing';
+    } else if ($('scrRevealStage').classList.contains('active')) {
+        phase = $('cardsWrapper').querySelector('.scoreboard') ? 'gameover' : 'reveal';
+    }
+    return {
+        type: 'REJOIN_SYNC',
+        phase,
+        label,
+        players: room.players,
+        subject: room.currentSubject,
+        prompt: room.currentPrompt,
+        category: room.currentCategory,
+        gameMode: room.gameMode,
+        playedQuestions: room.playedQuestions,
+        maxRounds: room.maxRounds,
+        roundCount: room.roundCount,
+        scores: room.scores,
+        lateJoiners: room.lateJoiners,
+        // Other players' cards are not sent while writing is still in progress.
+        cards: phase === 'writing' ? [] : room.cards,
+        hasSubmitted: room.cards.some(c => c.creator === label),
+        cardCount: room.cards.length,
+        totalWriters: room.activeWriters.length
+    };
+}
+
+// Client: put a returning writer/subject back on the right screen for the round in
+// progress, WITHOUT the round-start reset (which would wipe their typed answer) when
+// they are already in this round. Submission state comes from the host's truth.
+function restoreWritingScreen(sameRound, hasSubmitted, cardCount, totalWriters) {
+    if (net.myName === room.currentSubject) {
+        if (!$('scrSubjectLounge').classList.contains('active')) {
+            $('subjectPromptBox').style.display = 'none';
+            showScreen('scrSubjectLounge');
+            requestAnimationFrame(() => setupFidgets());
+        }
+        $('submissionTrackLabel').innerText = `${cardCount} of ${totalWriters} cards locked in...`;
+    } else {
+        if (!sameRound) {
+            $('writerInput').value   = "";
+            $('charCount').innerText = "0 / 120 words";
+        }
+        $('writerCategoryLabel').innerText = (room.currentCategory === 'classic' ? 'party' : room.currentCategory).toUpperCase();
+        $('activePromptLabel').innerText   = room.currentPrompt;
+        if (!$('scrWriterInput').classList.contains('active')) showScreen('scrWriterInput');
+        // Host is the source of truth: if a submit was lost in the outage this re-enables the button.
+        $('lockInBtn').disabled  = hasSubmitted;
+        $('lockInBtn').innerText = hasSubmitted ? "Locked" : "Lock In Card";
+    }
 }
 
 // ── ROUND FLOW ─────────────────────────────────────────────────────────────────
