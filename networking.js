@@ -412,7 +412,7 @@ function _connectToHost(targetId, isReconnect) {
                 _emitStatus('replaced');
                 return;
             }
-            _dispatchData(data, null);
+            _dispatchData(data, conn);
         });
 
         conn.on('close', () => { if (!stale()) _handleHostConnectionLost('close'); });

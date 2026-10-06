@@ -3,8 +3,8 @@
   "name": "Insight - Party Game",
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#ff0055",
-  "background_color": "#070311",
+  "theme_color": "#f4eedc",
+  "background_color": "#d8cfb8",
   "orientation": "portrait",
   "icons": [
     {

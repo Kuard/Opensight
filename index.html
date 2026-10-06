@@ -2,29 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>try{var _t=localStorage.getItem("opensight-theme");document.documentElement.dataset.theme=_t==="dark"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
+    <meta name="theme-color" content="#f4eedc">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Insight - Party Game Engine</title>
+    <title>OpenSight - Party Game Engine</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Insight">
+    <meta name="apple-mobile-web-app-title" content="OpenSight">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon_small.png">
     <link rel="apple-touch-icon" href="icons/icon_large.png">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&family=Caveat+Brush&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="buttons.css">
     <link rel="stylesheet" href="cards.css">
     <link rel="stylesheet" href="fidget.css">
     <link rel="stylesheet" href="coinmode.css">
-    <link rel="stylesheet" href="buttons.css">
 </head>
 
 <body>
 
 <div class="app-container">
+
+<div class="circle-btn" id="osSettingsBtn" onclick="osOpenSettings()" title="Settings">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+</div>
+
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target===this)osCloseSettings()">
+    <div class="modal-card settings-card">
+        <div class="modal-title">Settings</div>
+        <section class="settings-control">
+            <div class="settings-control-heading">
+                <label for="gameVolumeSlider">Game volume</label>
+                <output id="gameVolumeValue" for="gameVolumeSlider">100%</output>
+            </div>
+            <input id="gameVolumeSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+            <div class="settings-control-hint">Adjust sound effects and drawing sounds.</div>
+        </section>
+        <section class="settings-control">
+            <div class="settings-control-heading">
+                <label for="vibrationSlider">Vibration strength</label>
+                <output id="vibrationValue" for="vibrationSlider">100%</output>
+            </div>
+            <input id="vibrationSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+            <div class="settings-control-hint" id="vibrationHint">Set to 0% to turn vibrations off.</div>
+        </section>
+        <div class="section-title">Theme</div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary theme-opt" data-theme-choice="light" onclick="osSetTheme('light')">Light</button>
+            <button type="button" class="btn-secondary theme-opt" data-theme-choice="dark" onclick="osSetTheme('dark')">Dark</button>
+        </div>
+        <button type="button" class="btn-main" style="margin-top:18px;" onclick="osCloseSettings()">Done</button>
+    </div>
+</div>
 
 <div class="modal-overlay" id="confirmLeaveModal">
     <div class="modal-card">
@@ -130,6 +166,7 @@
     <div class="brand-subtitle" id="coinTapInstruction" style="text-align:center; margin-bottom: 10px;">TAP COIN TO FLIP</div>
     <div class="coin-stage">
         <div class="neon-coin" id="neonCoinElem">
+            <div class="coin-rim" id="coinRim" aria-hidden="true"></div>
             <div class="coin-face coin-front">HEADS</div>
             <div class="coin-face coin-back">TAILS</div>
         </div>
@@ -141,7 +178,7 @@
 
     <div class="screen active" id="scrMenu" style="justify-content: center;">
         <div class="brand-header" style="text-align: center; margin-bottom: 30px;">
-            <div class="brand-title" style="font-size: 24px;">INSIGHT</div>
+            <div class="brand-title" style="font-size: 24px;">OpenSight</div>
             <div class="brand-subtitle">Party Game </div>
         </div>
         <input type="text" class="input-field" id="menuNameInput" placeholder="Your Nickname" maxlength="12">
@@ -173,9 +210,9 @@
         <div class="room-section">
             <div class="brand-subtitle">Share this Room ID with your friends</div>
             <div class="room-code-display" id="lobbyIdLabel">⌛</div>
-            <button class="btn-outline" onclick="window.Vibrate && window.Vibrate.click(); navigator.clipboard.writeText(document.getElementById('lobbyIdLabel').innerText)">
+            <button type="button" class="btn-outline" id="copyRoomIdBtn" aria-label="Copy Room ID" onclick="copyRoomId(this)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy Room ID
+                <span class="copy-room-label">Copy Room ID</span>
             </button>
         </div>
 
@@ -191,8 +228,14 @@
                 <div class="section-title" style="font-size: 11px; margin-bottom: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px; text-align: center;">GAME MODE</div>
                 
                 <div style="display: flex; gap: 6px;">
-                    <button type="button" class="btn-secondary active" id="btnModeClassic" onclick="CoinMode.setGameMode('classic')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-pink, #ff0055);">Classic</button>
-                    <button type="button" class="btn-secondary" id="btnModeCoin" onclick="CoinMode.setGameMode('coin')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-cyan, #00f0ff);"> Coin Mode</button>
+                    <button type="button" class="btn-secondary active" id="btnModeClassic" onclick="CoinMode.setGameMode('classic')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-pink, #ff0055);">
+                        <span class="mode-label">Classic</span>
+                        <svg class="mode-ring" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true" focusable="false"><ellipse cx="100" cy="40" rx="96" ry="35"></ellipse></svg>
+                    </button>
+                    <button type="button" class="btn-secondary" id="btnModeCoin" onclick="CoinMode.setGameMode('coin')" style="flex: 1; padding: 8px 4px; font-size: 13px; border-color: var(--neon-cyan, #00f0ff);">
+                        <span class="mode-label">Coin Mode</span>
+                        <svg class="mode-ring" viewBox="0 0 200 80" preserveAspectRatio="none" aria-hidden="true" focusable="false"><ellipse cx="100" cy="40" rx="96" ry="35"></ellipse></svg>
+                    </button>
                 </div>
 
                 <div id="coinCategoryPicker" style="display: none; margin-top: 10px;">
@@ -343,8 +386,73 @@
 <script src="fidget.js"></script>
 <script src="buttons.js"></script>
 <script src="coinMode.js"></script>
-<script src="game.js"></script>
 <script src="players.js"></script>
+<script src="game.js"></script>
 
+<script>
+(function(){
+  var root=document.documentElement;
+  function paint(t){
+    root.dataset.theme=t;
+    var m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=t==='dark'?'#2a2b2e':'#f4eedc';
+    document.querySelectorAll('.theme-opt').forEach(function(b){b.classList.toggle('active',b.dataset.themeChoice===t);});
+  }
+  window.osSetTheme=function(t){
+    t=t==='dark'?'dark':'light';
+    var changed=root.dataset.theme!==t;
+    try{localStorage.setItem('opensight-theme',t);}catch(e){}
+    paint(t); window.Vibrate && window.Vibrate.click && window.Vibrate.click();
+    if(changed && typeof Sound !== 'undefined' && Sound.draw) Sound.draw();
+  };
+  window.osOpenSettings=function(){ window.Vibrate && window.Vibrate.click && window.Vibrate.click(); document.getElementById('settingsModal').classList.add('active'); };
+  window.osCloseSettings=function(){ document.getElementById('settingsModal').classList.remove('active'); };
+  function readSetting(key,fallback){
+    try{
+      var stored=localStorage.getItem(key);
+      if(stored===null||stored.trim()==='')return fallback;
+      var value=Number(stored);
+      return Number.isFinite(value)?Math.max(0,Math.min(100,value)):fallback;
+    }catch(e){return fallback;}
+  }
+  function saveSetting(key,value){
+    try{localStorage.setItem(key,String(value));}catch(e){}
+  }
+  var volumeSlider=document.getElementById('gameVolumeSlider');
+  var volumeValue=document.getElementById('gameVolumeValue');
+  var vibrationSlider=document.getElementById('vibrationSlider');
+  var vibrationValue=document.getElementById('vibrationValue');
+  var vibrationHint=document.getElementById('vibrationHint');
+  var savedVolume=readSetting('opensight-game-volume',100);
+  var savedVibration=readSetting('opensight-vibration-strength',100);
+  volumeSlider.value=String(savedVolume);
+  vibrationSlider.value=String(savedVibration);
+  Sound.setVolume(savedVolume/100);
+  window.Vibrations.setIntensity(savedVibration/100);
+  volumeValue.value=savedVolume+'%';
+  volumeValue.textContent=savedVolume+'%';
+  vibrationValue.value=savedVibration+'%';
+  vibrationValue.textContent=savedVibration+'%';
+  if(!window.Vibrations.isSupported()){
+    vibrationSlider.disabled=true;
+    vibrationHint.textContent='Vibration is not supported on this device.';
+  }
+  volumeSlider.addEventListener('input',function(){
+    var value=Number(volumeSlider.value);
+    Sound.setVolume(value/100);
+    volumeValue.value=value+'%';
+    volumeValue.textContent=value+'%';
+    saveSetting('opensight-game-volume',value);
+  });
+  vibrationSlider.addEventListener('input',function(){
+    var value=Number(vibrationSlider.value);
+    window.Vibrations.setIntensity(value/100);
+    vibrationValue.value=value+'%';
+    vibrationValue.textContent=value+'%';
+    vibrationHint.textContent=value===0?'Vibrations are off.':'Set to 0% to turn vibrations off.';
+    saveSetting('opensight-vibration-strength',value);
+  });
+  paint(root.dataset.theme||'light');
+})();
+</script>
 </body>
 </html>

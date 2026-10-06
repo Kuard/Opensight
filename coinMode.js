@@ -24,40 +24,37 @@ async function loadCoinQuestions() {
     }
 }
 
-// Automatically trigger the load when coin.js initializes
+// Load the dedicated Coin Mode question pool when this engine initializes.
 loadCoinQuestions();
 
 let coinState = {
     active: false,
+    phase: 'lobby',
     selectedCategory: 'Party',
     subject: '',
     targetPlayer: '',
     question: '',
     chosenSide: null,
     flipResult: null,
+    flipCompletionTimer: null,
     nextSubjectOverride: null,
-    gameMode: 'classic',
-
     // ── ANTI-REPETITION STATE (Coin Mode only, isolated from classic mode) ──
     usedQuestionsByCategory: {},
     previousSubject: null,
-    sessionInitialized: false,
-    roundsInitialized: false
+    sessionInitialized: false
 };
 
-// ── SESSION LIFECYCLE HOOK ──
-(function hookLeaveRoomForCoinReset() {
+// game.js defines leaveRoom later in the document, so install the wrapper only
+// after every script has loaded.
+document.addEventListener('DOMContentLoaded', () => {
     const originalLeaveRoom = window.leaveRoom;
-    if (typeof originalLeaveRoom === 'function') {
-        window.leaveRoom = function (...args) {
-            coinState.sessionInitialized = false;
-            coinState.usedQuestionsByCategory = {};
-            coinState.previousSubject = null;
-            coinState.roundsInitialized = false;
-            return originalLeaveRoom.apply(this, args);
-        };
-    }
-})();
+    if (typeof originalLeaveRoom !== 'function') return;
+
+    window.leaveRoom = function (...args) {
+        CoinMode.resetSession();
+        return originalLeaveRoom.apply(this, args);
+    };
+}, { once: true });
 
 // ── NETWORK INTERCEPTOR ──
 // NOTE: routing of COIN_* vs regular messages now happens in game.js's
@@ -73,6 +70,7 @@ let coinState = {
 const CoinMode = {
     setGameMode(mode) {
         if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+        const modeChanged = room.gameMode !== mode;
         room.gameMode = mode; // Integrate with global room state
         const btnClassic = document.getElementById('btnModeClassic');
         const btnCoin = document.getElementById('btnModeCoin');
@@ -83,8 +81,9 @@ const CoinMode = {
 
         const isCoin = (mode === 'coin');
 
-        if (btnCoin) btnCoin.style.background = isCoin ? 'rgba(0, 240, 255, 0.2)' : 'transparent';
-        if (btnClassic) btnClassic.style.background = isCoin ? 'transparent' : 'rgba(255, 0, 85, 0.2)';
+        if (btnClassic) btnClassic.classList.toggle('active', !isCoin);
+        if (btnCoin) btnCoin.classList.toggle('active', isCoin);
+        if (modeChanged && typeof Sound !== 'undefined' && Sound.draw) Sound.draw();
         if (catPicker) catPicker.style.display = isCoin ? 'block' : 'none';
         if (roundPicker) roundPicker.style.display = isCoin ? 'block' : 'none';
         if (classicControls) classicControls.style.display = isCoin ? 'none' : 'block';
@@ -97,7 +96,6 @@ const CoinMode = {
         if (isCoin) {
             coinState.selectedCategory = 'Party';
             room.maxRounds = 10;
-            coinState.roundsInitialized = true;
 
             const defaultPill = document.getElementById('coinRoundPill10');
             if (defaultPill) {
@@ -126,13 +124,14 @@ const CoinMode = {
         room.maxRounds = n;
         document.querySelectorAll('.btn-coin-round').forEach(b => b.classList.remove('active'));
         if (el) el.classList.add('active');
-        if (typeof Sound !== 'undefined' && Sound.play) Sound.play(400, 'sine', 0.05);
+        if (typeof Sound !== 'undefined' && Sound.drawRound) Sound.drawRound();
         if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
         if (net.role === 'host') broadcastToAll({ type: 'SYNC_MAX_ROUNDS', maxRounds: n });
     },
 
     selectCategory(catName, btnElem) {
         if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+        if (typeof Sound !== 'undefined' && Sound.draw) Sound.draw();
         coinState.selectedCategory = catName;
         document.querySelectorAll('.btn-cat').forEach(b => {
             b.classList.remove('active');
@@ -187,8 +186,27 @@ const CoinMode = {
         coinState.sessionInitialized = true;
     },
 
+    resetSession() {
+        clearTimeout(coinState.flipCompletionTimer);
+        coinState.flipCompletionTimer = null;
+        coinState.active = false;
+        coinState.phase = 'lobby';
+        coinState.subject = '';
+        coinState.targetPlayer = '';
+        coinState.question = '';
+        coinState.chosenSide = null;
+        coinState.flipResult = null;
+        coinState.nextSubjectOverride = null;
+        coinState.sessionInitialized = false;
+        this.resetSessionTracking();
+        coinState.sessionInitialized = false;
+    },
+
     drawUnusedQuestion(category) {
-        const fullList = TARGET_QUESTIONS_BY_CATEGORY[category] || TARGET_QUESTIONS_BY_CATEGORY["Party"];
+        const fullList = TARGET_QUESTIONS_BY_CATEGORY[category] || TARGET_QUESTIONS_BY_CATEGORY["Party"] || [];
+        if (!fullList.length) {
+            throw new Error(`No Coin Mode questions are available for category "${category}".`);
+        }
 
         if (!coinState.usedQuestionsByCategory[category]) {
             coinState.usedQuestionsByCategory[category] = [];
@@ -223,10 +241,24 @@ const CoinMode = {
     },
 
     startRound() {
+        if (net.role !== 'host') return;
         if (room.gameMode !== 'coin') return;
+        clearTimeout(coinState.flipCompletionTimer);
+        coinState.flipCompletionTimer = null;
+        if (room.players.length < 3) {
+            alert('Need at least 3 players!');
+            return;
+        }
 
         if (room.maxRounds !== 'unlimited' && room.roundCount >= room.maxRounds) {
+            coinState.active = false;
+            coinState.phase = 'gameover';
             broadcastToAll({ type: 'GAME_OVER', scores: room.scores, lateJoiners: room.lateJoiners });
+            return;
+        }
+
+        if (!Object.keys(TARGET_QUESTIONS_BY_CATEGORY).length) {
+            alert('Coin Mode questions are still loading. Please try again in a moment.');
             return;
         }
 
@@ -237,6 +269,7 @@ const CoinMode = {
         }
 
         coinState.active = true;
+        coinState.phase = 'target';
         coinState.targetPlayer = '';
         coinState.chosenSide = null;
         coinState.flipResult = null;
@@ -258,6 +291,65 @@ const CoinMode = {
             question: coinState.question,
             roundCount: room.roundCount
         });
+    },
+
+    getSyncState() {
+        return {
+            type: 'COIN_SYNC_STATE',
+            active: coinState.active,
+            phase: coinState.phase,
+            selectedCategory: coinState.selectedCategory,
+            subject: coinState.subject,
+            targetPlayer: coinState.targetPlayer,
+            question: coinState.question,
+            chosenSide: coinState.chosenSide,
+            flipResult: coinState.flipResult,
+            roundCount: room.roundCount
+        };
+    },
+
+    restoreSyncState(data) {
+        coinState.active = !!data.active;
+        room.gameMode = 'coin';
+        coinState.phase = data.phase || 'lobby';
+        coinState.selectedCategory = data.selectedCategory || 'Party';
+        coinState.subject = data.subject || '';
+        coinState.targetPlayer = data.targetPlayer || '';
+        coinState.question = data.question || '';
+        coinState.chosenSide = data.chosenSide || null;
+        coinState.flipResult = data.flipResult || null;
+        room.roundCount = data.roundCount ?? room.roundCount;
+
+        if (coinState.phase === 'gameover') {
+            executeGameOverUI();
+        } else if (!coinState.active || coinState.phase === 'lobby') {
+            showScreen('scrLobby');
+        } else if (coinState.phase === 'target') {
+            this.renderPhase1();
+            if (coinState.targetPlayer) {
+                document.getElementById('coinWaitTargetLabel').innerText =
+                    `${coinState.subject} picked ${coinState.targetPlayer}!`;
+                document.getElementById('coinContinueBtn').style.display = 'block';
+                document.getElementById('coinSilentBroadcastBtn').style.display = 'block';
+            }
+        } else if (coinState.phase === 'side') {
+            this.renderPhase2();
+        } else if (coinState.phase === 'flip') {
+            this.renderPhase3();
+        } else if (coinState.phase === 'flipping' || coinState.phase === 'outcome') {
+            clearTimeout(coinState.flipCompletionTimer);
+            coinState.flipCompletionTimer = null;
+            this.renderPhase3();
+            if (coinState.flipResult) {
+                const angle = coinState.flipResult === 'tails' ? 1980 : coinState.flipResult === 'edge' ? 1890 : 1800;
+                if (coinState.phase === 'outcome') {
+                    document.getElementById('neonCoinElem').style.transform = `rotateY(${angle}deg)`;
+                    this.resolveOutcome(coinState.flipResult);
+                } else {
+                    this.executeFlipAnimation(angle, coinState.flipResult);
+                }
+            }
+        }
     },
 
     selectTargetPlayer(playerName) {
@@ -337,10 +429,53 @@ const CoinMode = {
         else if (net.conn) net.conn.send(payload);
     },
 
-    handleNetwork(data) {
+    canAcceptNetworkAction(data, playerName) {
+        if (!coinState.active || room.gameMode !== 'coin' || playerName !== coinState.subject) return false;
+
+        switch (data.type) {
+            case 'COIN_TARGET_SELECTED':
+                return coinState.phase === 'target' &&
+                    room.players.includes(data.targetPlayer) && data.targetPlayer !== coinState.subject;
+            case 'COIN_SILENT_BROADCAST':
+                return coinState.phase === 'target' &&
+                    data.subject === coinState.subject && data.targetPlayer === coinState.targetPlayer;
+            case 'COIN_ADVANCE_MATRIX':
+                return coinState.phase === 'target' && !!coinState.targetPlayer;
+            case 'COIN_SIDE_CHOSEN':
+                return coinState.phase === 'side' && (data.side === 'heads' || data.side === 'tails');
+            case 'COIN_TRIGGER_FLIP':
+                return coinState.phase === 'flip' && coinState.chosenSide !== null &&
+                    ((data.flipResult === 'heads' && data.targetAngle === 1800) ||
+                    (data.flipResult === 'tails' && data.targetAngle === 1980) ||
+                    (data.flipResult === 'edge' && data.targetAngle === 1890));
+            case 'COIN_SET_NEXT_SUBJECT':
+                return coinState.phase === 'outcome' && coinState.flipResult === 'edge' &&
+                    (data.nextSubject === null ||
+                    (room.players.includes(data.nextSubject) && data.nextSubject !== coinState.subject));
+            default:
+                return false;
+        }
+    },
+
+    handleNetwork(data, connection) {
+        if (!data || typeof data.type !== 'string') return;
+        if (net.role === 'client' && connection && connection !== net.conn) return;
+
+        if (data.type === 'COIN_SYNC_STATE' && net.role === 'client') {
+            this.restoreSyncState(data);
+            return;
+        }
+
+        if (net.role === 'host' && connection) {
+            const player = connection._playerId && net.roster[connection._playerId];
+            if (!player || player.conn !== connection || !player.connected ||
+                !this.canAcceptNetworkAction(data, player.label)) return;
+        }
+
         switch (data.type) {
             case 'COIN_START_ROUND':
                 coinState.active = true;
+                coinState.phase = 'target';
                 coinState.subject = data.subject;
                 coinState.question = data.question;
                 if (data.roundCount) room.roundCount = data.roundCount;
@@ -363,16 +498,20 @@ const CoinMode = {
                 break;
 
             case 'COIN_ADVANCE_MATRIX':
+                coinState.phase = 'side';
                 this.renderPhase2();
                 this.triggerBotMatrixTurn();
                 break;
 
             case 'COIN_SIDE_CHOSEN':
                 coinState.chosenSide = data.side;
+                coinState.phase = 'flip';
                 this.renderPhase3();
                 break;
 
             case 'COIN_TRIGGER_FLIP':
+                coinState.phase = 'flipping';
+                coinState.flipResult = data.flipResult;
                 this.executeFlipAnimation(data.targetAngle, data.flipResult);
                 break;
 
@@ -381,6 +520,10 @@ const CoinMode = {
                 document.getElementById('coinEasterEggModal').classList.remove('active');
                 break;
         }
+
+        // Client-originated actions are applied by the host first, then relayed to
+        // the other peers so every participant advances through the same phase.
+        if (net.role === 'host' && connection) broadcastToConnections(data);
     },
 
     renderPhase1() {
@@ -426,10 +569,24 @@ const CoinMode = {
     renderPhase3() {
         const coin = document.getElementById('neonCoinElem');
         const tapPrompt = document.getElementById('coinTapInstruction');
-        coin.style.transform = 'rotateY(0deg)';
-        coin.classList.remove('edge-landing');
-        document.getElementById('coinOutcomeBanner').style.display = 'none';
-        document.getElementById('coinRevealedQuestionCard').style.display = 'none';
+        const rim = document.getElementById('coinRim');
+        if (rim && rim.childElementCount === 0) {
+            const segments = document.createDocumentFragment();
+            for (let index = 0; index < 40; index++) {
+                const segment = document.createElement('span');
+                segment.className = 'coin-rim-segment';
+                segment.style.transform = `rotateZ(${index * 9}deg) translateY(-66px) rotateX(90deg)`;
+                segments.appendChild(segment);
+            }
+            rim.appendChild(segments);
+        }
+        if (coinState.phase !== 'flipping' && coinState.phase !== 'outcome') {
+            coin.style.transform = 'rotateY(0deg)';
+            coin.classList.remove('edge-landing');
+            document.getElementById('coinOutcomeBanner').style.display = 'none';
+            document.getElementById('coinRevealedQuestionCard').style.display = 'none';
+            document.getElementById('coinNextRoundBtn').style.display = 'none';
+        }
 
         const isSubject = (net.myName === coinState.subject);
         if (isSubject) {
@@ -445,13 +602,17 @@ const CoinMode = {
     },
 
     executeFlipAnimation(targetAngle, result) {
+        clearTimeout(coinState.flipCompletionTimer);
         const coin = document.getElementById('neonCoinElem');
         coin.style.pointerEvents = 'none';
         document.getElementById('coinTapInstruction').innerText = "Flipping...";
         coin.style.transform = `rotateY(${targetAngle}deg)`;
 
-        setTimeout(() => {
+        coinState.flipCompletionTimer = setTimeout(() => {
+            coinState.flipCompletionTimer = null;
+            if (coinState.phase !== 'flipping' || coinState.flipResult !== result) return;
             coinState.flipResult = result;
+            coinState.phase = 'outcome';
             this.resolveOutcome(result);
         }, 3100);
     },

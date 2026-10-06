@@ -1,20 +1,16 @@
 /**
  * Insight - Card System & Viewport Engine
- * Manages the card viewport, navigation, physical swipe-to-flip reveal,
- * double-tap reveal fallback, and long-press winner selection.
+ * Manages the card viewport, navigation, double-tap reveal, and long-press
+ * winner selection.
  *
  * Interaction model:
  *  - Tap a neighboring (non-centered) card  -> navigate to it (no reveal)
  *  - Tap arrows                             -> navigate
- *  - Horizontal swipe on the CENTERED card  -> reveals it, rotating the card
- *    around its vertical edge, following the drag live
- *  - Double-tap the centered unrevealed card -> reveal (same underlying
- *    reveal path as the swipe, just triggered differently)
+ *  - Double-tap the centered card -> reveal or hide it on this device only
  *  - Long-press a fully revealed, centered card -> select as winner
  * A single pointer gesture only ever resolves to ONE of: navigate / reveal /
  * long-press-select. They are disambiguated in handlePointerUp/timers below
- * so a reveal swipe can't also fire a long press, and a normal tap can't
- * accidentally reveal.
+ * so a normal tap can't accidentally reveal.
  */
 
 const CardSystem = {
@@ -29,8 +25,7 @@ const CardSystem = {
     gestureAttached: false,
 
     // ── Gesture tuning ──
-    SWIPE_REVEAL_THRESHOLD: 70,     // px of horizontal drag on centered card to commit a reveal
-    NAV_SWIPE_THRESHOLD: 35,        // px of horizontal drag to navigate (non-centered / vertical swipe fallback)
+    NAV_SWIPE_THRESHOLD: 35,        // px of horizontal drag on a neighboring card to navigate
     TAP_MAX_MOVEMENT: 10,           // px - below this, a pointer up counts as a tap, not a drag
     DOUBLE_TAP_MAX_DELAY: 350,      // ms between taps to count as a double-tap
     LONG_PRESS_MS: 550,             // ms of holding still to trigger winner selection
@@ -141,10 +136,23 @@ const CardSystem = {
                 <div class="reveal-card-face reveal-card-back">
                     <div class="card-text"></div>
                     <div class="author-reveal" style="display:none;"></div>
-                    <button class="fav-btn" style="display:none;">WINNER</button>
+                    <button type="button" class="card-copy-btn" style="display:none;" aria-label="Copy card text">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>
+                        <span class="card-copy-label">COPY</span>
+                    </button>
                 </div>
             </div>
         `;
+
+        const copyBtn = el.querySelector('.card-copy-btn');
+        copyBtn.addEventListener('pointerdown', e => e.stopPropagation());
+        copyBtn.addEventListener('mousedown', e => e.stopPropagation());
+        copyBtn.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+        copyBtn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.copyCardText(idx, copyBtn);
+        });
 
         this.updateCardContent(el, card, idx);
         return el;
@@ -154,7 +162,7 @@ const CardSystem = {
         if (!el) return;
         const textEl = el.querySelector('.card-text');
         const authorEl = el.querySelector('.author-reveal');
-        const favBtn = el.querySelector('.fav-btn');
+        const copyBtn = el.querySelector('.card-copy-btn');
         const frontLabelEl = el.querySelector('.card-front-label');
 
         el.classList.remove('selected', 'is-flipped');
@@ -166,16 +174,16 @@ const CardSystem = {
             if (frontLabelEl) frontLabelEl.innerText = idx + 1;
             if (textEl) textEl.innerText = card.text;
             if (authorEl) {
-                authorEl.innerHTML = `Written by: ${card.creator}`;
+                authorEl.innerText = `Written by: ${card.creator}`;
                 authorEl.style.display = 'block';
             }
-            if (favBtn) favBtn.style.display = 'none';
+            if (copyBtn) copyBtn.style.display = 'inline-flex';
         } else if (card.revealed) {
             el.classList.add('is-flipped');
             if (frontLabelEl) frontLabelEl.innerText = idx + 1;
             if (textEl) textEl.innerText = card.text;
             if (authorEl) authorEl.style.display = 'none';
-            if (favBtn) favBtn.style.display = 'none'; // winner is now long-press, not a button tap
+            if (copyBtn) copyBtn.style.display = 'inline-flex';
         } else {
             el.classList.remove('is-flipped');
             if (frontLabelEl) frontLabelEl.innerText = idx + 1;
@@ -184,8 +192,62 @@ const CardSystem = {
                 textEl.innerHTML = `<div style="font-size: 11px; color: var(--neon-pink); font-weight: 700; letter-spacing: 0.5px;">HIDDEN</div>`;
             }
             if (authorEl) authorEl.style.display = 'none';
-            if (favBtn) favBtn.style.display = 'none';
+            if (copyBtn) copyBtn.style.display = 'none';
         }
+    },
+
+    async copyCardText(idx, button) {
+        const card = this.cards[idx];
+        if (!card || (!card.revealed && !card.selected)) return;
+
+        const text = card.selected && card.creator
+            ? `${card.text}\n\nWritten by: ${card.creator}`
+            : card.text;
+        let copied = false;
+        let copyError = null;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+                copied = true;
+            } catch (error) {
+                copyError = error;
+            }
+        }
+
+        if (!copied) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.setAttribute('readonly', '');
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            try {
+                textArea.select();
+                copied = document.execCommand('copy');
+            } catch (error) {
+                copyError = error;
+            } finally {
+                textArea.remove();
+            }
+        }
+
+        if (!copied) {
+            console.error('Unable to copy revealed card text.', copyError);
+            if (typeof showToast === 'function') showToast('Could not copy card');
+            return;
+        }
+
+        const label = button.querySelector('.card-copy-label');
+        button.classList.add('is-copied');
+        button.setAttribute('aria-label', 'Card text copied');
+        if (label) label.innerText = 'COPIED';
+        if (typeof showToast === 'function') showToast('Card copied');
+        setTimeout(() => {
+            button.classList.remove('is-copied');
+            button.setAttribute('aria-label', 'Copy card text');
+            if (label) label.innerText = 'COPY';
+        }, 1400);
     },
 
     updateCard(idx) {
@@ -227,13 +289,13 @@ const CardSystem = {
                 el.className = 'reveal-card-scene pos-left';
                 el.style.transform = `translateX(-105px) translateY(12px) scale(0.88) rotate(-6deg)`;
                 el.style.zIndex = '20';
-                el.style.opacity = '0.9';
+                el.style.opacity = '1';
                 el.style.pointerEvents = 'auto';
             } else if (diff === 1) {
                 el.className = 'reveal-card-scene pos-right';
                 el.style.transform = `translateX(105px) translateY(12px) scale(0.88) rotate(6deg)`;
                 el.style.zIndex = '20';
-                el.style.opacity = '0.9';
+                el.style.opacity = '1';
                 el.style.pointerEvents = 'auto';
             } else if (diff < -1) {
                 const stackDepth = Math.min(4, Math.abs(diff) - 1);
@@ -245,7 +307,7 @@ const CardSystem = {
 
                 el.style.transform = `translateX(${offsetX}px) translateY(${offsetY}px) scale(${scale}) rotate(${rot}deg)`;
                 el.style.zIndex = `${15 - stackDepth}`;
-                el.style.opacity = `${Math.max(0, 0.7 - stackDepth * 0.2)}`;
+                el.style.opacity = '1';
                 el.style.pointerEvents = 'none';
             } else if (diff > 1) {
                 const stackDepth = Math.min(4, diff - 1);
@@ -257,7 +319,7 @@ const CardSystem = {
 
                 el.style.transform = `translateX(${offsetX}px) translateY(${offsetY}px) scale(${scale}) rotate(${rot}deg)`;
                 el.style.zIndex = `${15 - stackDepth}`;
-                el.style.opacity = `${Math.max(0, 0.7 - stackDepth * 0.2)}`;
+                el.style.opacity = '1';
                 el.style.pointerEvents = 'none';
             }
 
@@ -301,8 +363,7 @@ const CardSystem = {
         }
     },
 
-    // Reveal the centered card. Shared by swipe-commit and double-tap so
-    // there is exactly one reveal code path.
+    // Reveal state stays local to this device.
     revealCentered() {
         const idx = this.focusIndex;
         const card = this.cards[idx];
@@ -437,7 +498,7 @@ const CardSystem = {
             }
 
             // Movement beyond the tap threshold cancels any pending long press,
-            // so a reveal swipe can never also fire a winner selection.
+            // so a drag can't also fire a long press.
             if (Math.abs(deltaX) > this.LONG_PRESS_MAX_MOVEMENT || Math.abs(deltaY) > this.LONG_PRESS_MAX_MOVEMENT) {
                 clearLongPress();
             }
@@ -445,17 +506,6 @@ const CardSystem = {
             if (Math.abs(deltaX) > Math.abs(deltaY)) {
                 dragging = true;
                 if (e.cancelable) e.preventDefault();
-
-                // Live-follow rotation, but only for the centered, unrevealed card -
-                // that's the only card a swipe is allowed to reveal.
-                const card = this.cards[activeIdx];
-                if (isCentered && card && !card.revealed && activeInnerEl) {
-                    const progress = Math.max(-1, Math.min(1, deltaX / 160));
-                    const deg = progress * -180;
-                    activeInnerEl.style.transition = 'none';
-                    activeInnerEl.style.transformOrigin = 'center center';
-                    activeInnerEl.style.transform = `rotateY(${deg}deg)`;
-                }
             } else if (Math.abs(deltaY) >= this.TAP_MAX_MOVEMENT) {
                 dragging = true;
                 gestureCancelled = true;
@@ -493,14 +543,9 @@ const CardSystem = {
             }
 
             if (wasDragging) {
-                const card = this.cards[idx];
-                if (!gestureCancelled && wasCentered && card && !card.revealed && Math.abs(deltaX) >= this.SWIPE_REVEAL_THRESHOLD) {
-                    // Committed reveal swipe.
-                    this.revealCentered();
-                    // onFlipCallback updates card.revealed + calls updateCard(),
-                    // which clears the inline transform and applies is-flipped
-                    // with its normal transition - no manual snap-back needed.
-                } else if (!gestureCancelled && !wasCentered && Math.abs(deltaX) >= this.NAV_SWIPE_THRESHOLD) {
+                lastTapTime = 0;
+                lastTapIdx = null;
+                if (!gestureCancelled && !wasCentered && Math.abs(deltaX) >= this.NAV_SWIPE_THRESHOLD) {
                     // Dragged on a neighboring card far enough - treat as navigation swipe.
                     if (deltaX < 0) this.nextCard(); else this.prevCard();
                     resetTransformIfAny(inner);
@@ -537,8 +582,7 @@ const CardSystem = {
                 // Tap on a visible neighboring card navigates to it. Never reveals.
                 this.setFocus(idx);
             }
-            // A single tap on the already-centered card does nothing by itself -
-            // reveal requires a swipe or a confirmed double-tap, per spec.
+            // A centered card only flips after a confirmed double-tap.
             gestureCancelled = false;
         };
 

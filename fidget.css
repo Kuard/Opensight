@@ -7,44 +7,47 @@
 }
 
 .fidget-toy {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
+    min-height: 100px;
+    background: var(--note);
+    border: 2px solid var(--line);
+    border-radius: var(--hd2);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
+    box-shadow: 2px 3px 0 var(--line-soft);
 }
 
 .clicker-btn {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #1a1525, #0f0b1a);
-    box-shadow: 4px 4px 10px rgba(0,0,0,0.5), -4px -4px 10px rgba(255,255,255,0.05);
+    background: var(--btn);
+    border: 2px solid var(--line);
+    box-shadow: 2px 3px 0 var(--line-soft);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 18px;
     font-weight: 800;
-    color: var(--neon-pink);
+    color: var(--btn-ink);
     cursor: pointer;
     user-select: none;
     transition: 0.1s;
-    border: 2px solid rgba(255,255,255,0.05);
+    border: 2px solid var(--line);
 }
 
 .clicker-btn:active {
-    transform: scale(0.9);
-    box-shadow: inset 4px 4px 10px rgba(0,0,0,0.8);
+    transform: scale(0.92);
+    box-shadow: inset 2px 3px 0 var(--line-soft);
 }
 
 .switch-track {
     width: 50px;
     height: 28px;
     border-radius: 14px;
-    background: rgba(0,0,0,0.5);
-    border: 2px solid rgba(255,255,255,0.1);
+    background: var(--face);
+    border: 2px solid var(--line);
     position: relative;
     cursor: pointer;
     transition: 0.3s;
@@ -54,23 +57,23 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--text-secondary);
+    background: var(--ink-soft);
     position: absolute;
     top: 2px;
     left: 2px;
     transition: 0.3s;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: 1px 2px 0 var(--line-soft);
 }
 
 .switch-track.on {
-    background: rgba(0, 255, 166, 0.2);
-    border-color: var(--neon-green);
+    background: var(--good);
+    border-color: var(--line);
 }
 
 .switch-track.on .switch-handle {
     left: 24px;
-    background: var(--neon-green);
-    box-shadow: 0 0 18px var(--neon-green), 0 0 6px var(--neon-green);
+    background: #fff;
+    box-shadow: 0 1px 2px var(--shadow);
 }
 
 .bubble-grid {
@@ -85,18 +88,20 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), rgba(0,0,0,0.4));
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--card);
+    border: 2px solid var(--line);
     cursor: pointer;
-    transition: 0.2s;
-    box-shadow: inset 2px 2px 5px rgba(255,255,255,0.1), inset -2px -2px 5px rgba(0,0,0,0.5);
+    appearance: none;
+    -webkit-appearance: none;
+    transition: transform .2s ease, background-color .2s ease;
+    box-shadow: 1px 2px 0 var(--line-soft);
 }
 
 .bubble.popped {
-    transform: scale(0.9);
-    background: rgba(0,0,0,0.6);
-    box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8);
-    border-color: transparent;
+    transform: scale(.88);
+    background: var(--paper-lo);
+    box-shadow: none;
+    border-color: var(--line-soft);
 }
 
 .coin-fidget-board {

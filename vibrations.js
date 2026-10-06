@@ -9,15 +9,27 @@
 
 const Vibrations = {
     enabled: true,
+    intensity: 1,
 
     _api: navigator.vibrate ? navigator.vibrate.bind(navigator)
         : (navigator.mozVibrate ? navigator.mozVibrate.bind(navigator) : null),
 
+    isSupported() { return Boolean(this._api); },
+    setIntensity(value) {
+        const intensity = Number(value);
+        this.intensity = Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 1;
+    },
+
     // Low-level primitive. Safe no-op if vibration is unsupported or disabled.
     _raw(pattern) {
-        if (!this.enabled) return;
+        if (!this.enabled || this.intensity === 0) return;
         if (!this._api) return;
-        try { this._api(pattern); } catch (e) {}
+        const scaledPattern = Array.isArray(pattern)
+            ? pattern.map((duration, index) => index % 2 === 0
+                ? Math.max(1, Math.round(duration * this.intensity))
+                : duration)
+            : Math.max(1, Math.round(pattern * this.intensity));
+        try { this._api(scaledPattern); } catch (e) {}
     },
 
     // ── Named patterns (existing behavior, preserved as-is) ──

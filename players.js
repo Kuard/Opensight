@@ -17,6 +17,8 @@
 //   - `broadcastToAll`, `disconnectPlayerConnection`   (networking.js)
 // It must load after vibrations.js and networking.js, and before game.js
 // (game.js's handleData() and lobby-sync branches call these functions).
+// The game.js globals are read only when these function bodies run, after every
+// script has loaded; they do not need to exist while this file is being parsed.
 
 // ── LOCAL PLAYER IDENTITY ────────────────────────────────────────────────────
 function getCleanName() {

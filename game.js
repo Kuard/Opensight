@@ -3,17 +3,57 @@ const $ = id => document.getElementById(id);
 
 const Sound = {
     ctx: null,
+    volume: 1,
+    // Public-domain "Pencil Scratchings" by gypsygirl: https://commons.wikimedia.org/wiki/File:Pencil_scratchings.ogg
+    drawingAudio: (() => {
+        const audio = new Audio('drawing.mp3');
+        audio.preload = 'auto';
+        audio.volume = 1;
+        return audio;
+    })(),
+    drawingStopTimer: null,
+    setVolume(value) {
+        const volume = Number(value);
+        this.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
+        this.drawingAudio.volume = this.volume;
+    },
     init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(freq, type, duration) {
+        if (this.volume === 0) return;
         try {
             this.init();
             const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
             osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.12 * this.volume, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
             osc.connect(gain); gain.connect(this.ctx.destination);
             osc.start(); osc.stop(this.ctx.currentTime + duration);
         } catch(e) {}
+    },
+    draw() {
+        this.playDrawingSound();
+    },
+    drawRound() {
+        this.playDrawingSound();
+    },
+    playDrawingSound() {
+        if (this.volume === 0) return;
+        try {
+            const audio = this.drawingAudio;
+            audio.pause();
+            audio.currentTime = 0;
+            clearTimeout(this.drawingStopTimer);
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(error => console.warn('Could not play drawing.mp3.', error));
+            }
+            this.drawingStopTimer = setTimeout(() => {
+                audio.pause();
+                audio.currentTime = 0;
+            }, 650);
+        } catch (error) {
+            console.warn('Could not play drawing.mp3.', error);
+        }
     }
 };
 
@@ -41,7 +81,7 @@ fetch('questions.json')
 
 // ── STATE ──────────────────────────────────────────────────────────────────────
 let room = {
-    id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
+    id:'', players:[], currentSubject:'', currentPrompt:'', currentCategory:'classic',
     gameMode: 'classic',
     cards:[], timeLimit:45, playedQuestions:[],
     scores: {},          
@@ -96,7 +136,7 @@ function setCategory(cat, el) {
     room.currentCategory = cat;
     document.querySelectorAll('.deck-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    Sound.play(400, 'sine', 0.05);
+    Sound.draw();
     if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
     if (net.role === 'host') broadcastToAll({ type: 'SYNC_CATEGORY', category: cat });
 }
@@ -105,9 +145,112 @@ function setMaxRounds(n, el) {
     room.maxRounds = n;
     document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
     el.classList.add('active');
-    Sound.play(400, 'sine', 0.05);
+    Sound.drawRound();
     if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
     if (net.role === 'host') broadcastToAll({ type: 'SYNC_MAX_ROUNDS', maxRounds: n });
+}
+
+async function copyRoomId(button) {
+    const roomId = ($('lobbyIdLabel')?.innerText || '').trim();
+    if (!roomId || roomId === '⌛') {
+        showToast('Room ID is not ready yet');
+        return;
+    }
+
+    let copied = false;
+    let copyError = null;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(roomId);
+            copied = true;
+        } catch (error) {
+            copyError = error;
+        }
+    }
+
+    if (!copied) {
+        const textArea = document.createElement('textarea');
+        textArea.value = roomId;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        textArea.style.userSelect = 'text';
+        textArea.style.webkitUserSelect = 'text';
+        document.body.appendChild(textArea);
+        try {
+            textArea.select();
+            copied = document.execCommand('copy');
+        } catch (error) {
+            copyError = error;
+        } finally {
+            textArea.remove();
+        }
+    }
+
+    if (!copied) {
+        console.error('Unable to copy room ID.', copyError);
+        showToast('Could not copy Room ID');
+        return;
+    }
+
+    if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+    if (button) {
+        const label = button.querySelector('.copy-room-label');
+        const originalLabel = label ? label.innerText : 'Copy Room ID';
+        button.classList.add('is-copied');
+        button.setAttribute('aria-label', 'Room ID copied');
+        if (label) label.innerText = 'Copied!';
+        setTimeout(() => {
+            button.classList.remove('is-copied');
+            button.setAttribute('aria-label', 'Copy Room ID');
+            if (label) label.innerText = originalLabel;
+        }, 1400);
+    }
+    showToast('Room ID copied');
+}
+
+function finishWritingRound(timedOut = false) {
+    if (net.role !== 'host' || !room.roundActive) return;
+
+    clearInterval(roundTimerInterval);
+    roundTimerInterval = null;
+
+    if (timedOut) {
+        room.activeWriters.forEach(player => {
+            if (!room.cards.some(card => card.creator === player)) {
+                room.cards.push({ text: '*Ran out of time*', creator: player, revealed: false, selected: false });
+            }
+        });
+    }
+
+    room.roundActive = false;
+    room.cards.sort(() => Math.random() - 0.5);
+    broadcastToAll({ type: 'GO_TO_REVEAL', cards: getSharedCardState(room.cards), scores: room.scores });
+}
+
+function getSharedCardState(cards) {
+    return cards.map(card => ({ ...card, revealed: false, revealedAt: null }));
+}
+
+function upsertRoundCard(card) {
+    const existing = room.cards.findIndex(existingCard => existingCard.creator === card.creator);
+    const revealed = existing >= 0 && room.cards[existing].revealed;
+    const revealedAt = existing >= 0 ? room.cards[existing].revealedAt : null;
+    const sharedCard = { ...card, revealed, revealedAt, selected: existing >= 0 && room.cards[existing].selected };
+    if (existing >= 0) room.cards[existing] = sharedCard;
+    else room.cards.push(sharedCard);
+}
+
+function refreshProgressiveReveal() {
+    if (room.cards.length === 0) return;
+    const revealActive = $('scrRevealStage').classList.contains('active');
+    const subjectWaiting = net.myName === room.currentSubject && $('scrSubjectLounge').classList.contains('active');
+    if (subjectWaiting) {
+        renderRevealStage();
+    } else if (revealActive) {
+        CardSystem.setCards(room.cards);
+        updateRevealInstructions();
+    }
 }
 
 function leaveRoom() {
@@ -115,7 +258,7 @@ function leaveRoom() {
     if (window.hostWaitInterval) clearInterval(window.hostWaitInterval);
     if (typeof disconnectPeer === 'function') disconnectPeer();
     room = {
-        id:'', players:[], currentSubject:'', currentPrompt:'', currentRawQuestion:'', currentCategory:'classic',
+        id:'', players:[], currentSubject:'', currentPrompt:'', currentCategory:'classic',
         gameMode: 'classic',
         cards:[], timeLimit:45, playedQuestions:[],
         scores: {}, subjectCounts: {}, lateJoiners: [], maxRounds: 10, roundCount: 0, roundActive: false, activeWriters: []
@@ -173,6 +316,24 @@ function showToast(msg) {
 
 // ── NETWORK MESSAGE HANDLING ─────────────────────────────────────────────────
 function handleData(data, connection) {
+    if (!data || typeof data !== 'object' || typeof data.type !== 'string') return;
+
+    if (net.role === 'host' && connection) {
+        const player = connection._playerId && net.roster[connection._playerId];
+        if (data.type === 'JOIN') {
+            if (player) return;
+        } else if (!player || player.conn !== connection || !player.connected) {
+            return;
+        }
+
+        if (data.type !== 'JOIN' &&
+            !['REQUEST_NEXT_ROUND', 'SUBMIT_CARD', 'SELECT_CARD'].includes(data.type)) {
+            return;
+        }
+    } else if (net.role === 'client' && connection && connection !== net.conn) {
+        return;
+    }
+
     if (data.type === 'JOIN' && net.role === 'host') {
         if (!connection) return; // a JOIN only ever arrives over a real connection
 
@@ -191,7 +352,11 @@ function handleData(data, connection) {
             // entry, score, role, submission and round membership. Explicitly NOT the
             // late-join path (no lateJoiners entry, no CATCH_UP, no PLAYER_JOINED_LATE).
             if (!(label in room.scores)) room.scores[label] = 0;
-            if (room.gameMode !== 'coin') connection.send(buildRejoinSync(label));
+            if (room.gameMode !== 'coin') {
+                connection.send(buildRejoinSync(label));
+            } else if (coinState.active) {
+                connection.send(CoinMode.getSyncState());
+            }
             broadcastToAll({ type: 'PLAYER_STATUS', name: label, status: 'rejoined' });
             return;
         }
@@ -208,7 +373,7 @@ function handleData(data, connection) {
                 subject: room.currentSubject,
                 prompt: room.currentPrompt,
                 category: room.currentCategory,
-                cards: room.cards,
+                cards: getSharedCardState(room.cards),
                 scores: room.scores,
                 lateJoiners: room.lateJoiners,
                 maxRounds: room.maxRounds,
@@ -235,6 +400,10 @@ function handleData(data, connection) {
                 lateJoiners: room.lateJoiners
             });
             if (typeof updateLobbyUI === 'function') updateLobbyUI();
+        }
+
+        if (room.gameMode === 'coin' && coinState.active) {
+            connection.send(CoinMode.getSyncState());
         }
     }
     else if (data.type === 'SYNC_LOBBY') {
@@ -268,6 +437,7 @@ function handleData(data, connection) {
         startRoundExecution();
     }
     else if (data.type === 'REQUEST_NEXT_ROUND' && net.role === 'host') {
+        if (connection && connection._kickName !== room.currentSubject) return;
         if (window.hostWaitInterval) {
             clearInterval(window.hostWaitInterval);
             window.hostWaitInterval = null;
@@ -275,59 +445,72 @@ function handleData(data, connection) {
         broadcastStartRound();
     }
     else if (data.type === 'SUBMIT_CARD' && net.role === 'host') {
-        if (!room.cards.some(c => c.creator === data.creator)) {
-            room.cards.push({ text: data.text, creator: data.creator, revealed: false, selected: false });
-            broadcastToAll({ type: 'CARD_COUNT', count: room.cards.length, total: room.activeWriters.length });
+        if (!room.roundActive) return;
+        const creator = connection ? connection._kickName : data.creator;
+        if (!room.activeWriters.includes(creator) || typeof data.text !== 'string') return;
+        if (!room.cards.some(c => c.creator === creator)) {
+            const text = data.text.trim();
+            if (!text) return;
+            const card = { text, creator, revealed: false, selected: false };
+            upsertRoundCard(card);
+            broadcastToConnections({
+                type: 'CARD_SUBMITTED',
+                card: { text, creator },
+                count: room.cards.length,
+                total: room.activeWriters.length
+            });
+            $('submissionTrackLabel').innerText = `${room.cards.length} of ${room.activeWriters.length} cards locked in...`;
+            refreshProgressiveReveal();
             if (room.cards.length >= room.activeWriters.length) {
-                clearInterval(roundTimerInterval);
-                room.roundActive = false;
-                room.cards.sort(() => Math.random() - 0.5);
-                broadcastToAll({ type: 'GO_TO_REVEAL', cards: room.cards, scores: room.scores });
+                finishWritingRound();
             }
         }
     }
-    else if (data.type === 'CARD_COUNT') {
-        if ($('submissionTrackLabel')) $('submissionTrackLabel').innerText = `${data.count} of ${data.total} cards locked in...`;
+    else if (data.type === 'CARD_SUBMITTED') {
+        if (!data.card || typeof data.card.creator !== 'string' || typeof data.card.text !== 'string') return;
+        upsertRoundCard(data.card);
+        if (data.count !== undefined && data.total !== undefined && $('submissionTrackLabel')) {
+            $('submissionTrackLabel').innerText = `${data.count} of ${data.total} cards locked in...`;
+        }
+        refreshProgressiveReveal();
     }
     else if (data.type === 'GO_TO_REVEAL') {
-        room.cards = data.cards;
+        const localRevealState = new Map(room.cards.map(card => [card.creator, {
+            revealed: card.revealed,
+            revealedAt: card.revealedAt
+        }]));
+        room.cards = (data.cards || []).map(card => {
+            const localState = localRevealState.get(card.creator);
+            return {
+                ...card,
+                revealed: !!(localState && localState.revealed),
+                revealedAt: localState ? localState.revealedAt : null
+            };
+        });
         if (data.scores !== undefined) room.scores = data.scores;
         room.roundActive = false;
         clearInterval(roundTimerInterval);
         renderRevealStage();
     }
-    else if (data.type === 'FLIP_CARD') {
-        const card = room.cards[data.index];
-        if (!card) return;
-        card.revealed = true;
-        card.revealedAt = Date.now();
-        syncRevealCard(data.index);
-        if (net.role === 'host' && connection) {
-            broadcastToConnections(data);
-        }
-    }
-    else if (data.type === 'UNFLIP_CARD') {
-        const card = room.cards[data.index];
-        if (!card) return;
-        card.revealed = false;
-        card.revealedAt = null;
-        syncRevealCard(data.index);
-        if (net.role === 'host' && connection) {
-            broadcastToConnections(data);
-        }
-    }
     else if (data.type === 'SELECT_CARD') {
+        if (net.role === 'host' && connection && connection._kickName !== room.currentSubject) return;
+        if (!Number.isInteger(data.index)) return;
+        const card = room.cards[data.index];
+        if (!card || room.roundActive || room.cards.some(c => c.selected && c !== card) || card.winnerScored) return;
         room.cards.forEach((c,i) => c.selected = (i === data.index));
         if (window.CardSystem) CardSystem.render();
 
         if (net.role === 'host') {
-            const winner = room.cards[data.index].creator;
+            const winner = card.creator;
             room.scores[winner] = (room.scores[winner] || 0) + 1;
+            card.winnerScored = true;
             broadcastToAll({ type: 'SYNC_SCORES', scores: room.scores });
             // Tell every client which card was picked, not just whoever sent it -
             // this was previously echoed back to the originating connection only.
             broadcastToConnections(data);
         }
+
+        updateRevealInstructions();
         
         if ($('scrRevealStage').classList.contains('active')) {
             updateNextRoundButtonState();
@@ -406,6 +589,8 @@ function handleData(data, connection) {
                     cards: [], scores: data.scores, lateJoiners: data.lateJoiners,
                     maxRounds: data.maxRounds, roundCount: data.roundCount
                 }, null);
+            } else if (data.hasSubmitted || (net.myName === room.currentSubject && room.cards.length > 0)) {
+                renderRevealStage();
             } else {
                 restoreWritingScreen(sameRound, !!data.hasSubmitted, data.cardCount || 0, data.totalWriters || 0);
             }
@@ -431,6 +616,7 @@ function handleData(data, connection) {
         room.lateJoiners = data.lateJoiners || room.lateJoiners;
         room.scores     = data.scores || room.scores;
         if (!room.lateJoiners.includes(data.name)) room.lateJoiners.push(data.name);
+        if (typeof updateLobbyUI === 'function') updateLobbyUI();
         showToast(`${data.name} joined the game!`);
         if (typeof Vibrate !== 'undefined' && Vibrate.tap) Vibrate.tap();
     }
@@ -534,8 +720,7 @@ function buildRejoinSync(label) {
         roundCount: room.roundCount,
         scores: room.scores,
         lateJoiners: room.lateJoiners,
-        // Other players' cards are not sent while writing is still in progress.
-        cards: phase === 'writing' ? [] : room.cards,
+        cards: getSharedCardState(room.cards),
         hasSubmitted: room.cards.some(c => c.creator === label),
         cardCount: room.cards.length,
         totalWriters: room.activeWriters.length
@@ -642,20 +827,27 @@ function startRoundExecution() {
 
     if (net.role === 'host') {
         clearInterval(roundTimerInterval);
+        roundTimerInterval = null;
         timeRemaining = room.timeLimit;
+        broadcastToAll({ type: 'TIMER_TICK', t: timeRemaining });
         roundTimerInterval = setInterval(() => {
-            broadcastToAll({ type: 'TIMER_TICK', t: timeRemaining });
-            if (timeRemaining <= 0) {
+            if (!room.roundActive) {
                 clearInterval(roundTimerInterval);
-                if (net.myName !== room.currentSubject) {
-                    const val = $('writerInput').value.trim();
-                    if (!$('lockInBtn').disabled) {
-                        $('writerInput').value = val || "*Ran out of time*";
-                        submitWriterCard();
-                    }
-                }
+                roundTimerInterval = null;
+                return;
             }
-            timeRemaining--;
+            timeRemaining = Math.max(0, timeRemaining - 1);
+            broadcastToAll({ type: 'TIMER_TICK', t: timeRemaining });
+            if (timeRemaining === 0) {
+                clearInterval(roundTimerInterval);
+                roundTimerInterval = null;
+                if (net.myName !== room.currentSubject && !$('lockInBtn').disabled) {
+                    const val = $('writerInput').value.trim();
+                    $('writerInput').value = val || '*Ran out of time*';
+                    submitWriterCard();
+                }
+                finishWritingRound(true);
+            }
         }, 1000);
 
         if (typeof Bots !== 'undefined') {
@@ -682,7 +874,7 @@ function startRoundExecution() {
 }
 
 function submitWriterCard() {
-    if (net.myName === room.currentSubject) return;
+    if (net.myName === room.currentSubject || !room.roundActive) return;
     const txt = $('writerInput').value.trim();
     if (!txt) return;
 
@@ -692,10 +884,27 @@ function submitWriterCard() {
 
     const payload = { type: 'SUBMIT_CARD', text: txt, creator: net.myName };
     if (net.role === 'host') handleData(payload, null);
-    else net.conn.send(payload);
+    else {
+        upsertRoundCard({ text: txt, creator: net.myName, revealed: false, selected: false });
+        net.conn.send(payload);
+    }
+    renderRevealStage();
 }
 
 // ── REVEAL STAGE ───────────────────────────────────────────────────────────────
+function updateRevealInstructions() {
+    const selectedCard = room.cards.find(card => card.selected);
+    $('revealInstructions').innerText = selectedCard
+        ? `${selectedCard.creator || 'A player'} wins! ${room.currentSubject} picked the winning card.`
+        : room.roundActive && net.myName === room.currentSubject
+            ? "Cards are arriving. Double-tap to reveal; choose a winner when everyone has submitted."
+            : room.roundActive
+                ? "Cards appear as players submit. Double-tap to reveal cards on your screen."
+                : net.myName === room.currentSubject
+                    ? "Double-tap to reveal cards, then pick a favourite to win!"
+                    : `${room.currentSubject} is choosing a winner...`;
+}
+
 function renderRevealStage() {
     if (window.hostWaitInterval) {
         clearInterval(window.hostWaitInterval);
@@ -713,7 +922,9 @@ function renderRevealStage() {
 
     let nextBtn = $('nextRoundBtn');
 
-    if (gameOver) {
+    if (room.roundActive) {
+        nextBtn.style.display = "none";
+    } else if (gameOver) {
         if (isHost) {
             nextBtn.style.display = "block";
             nextBtn.disabled = false;
@@ -731,29 +942,22 @@ function renderRevealStage() {
         updateNextRoundButtonState();
     }
 
-    $('revealInstructions').innerText = isMeSubject
-        ? "Tap/swipe cards to reveal. Pick a favourite to win!"
-        : `${room.currentSubject} is judging...`;
+    updateRevealInstructions();
 
     const container = $('cardsWrapper');
 
     CardSystem.init(container, room.cards, {
-        isMeSubject: isMeSubject,
+        isMeSubject: isMeSubject && !room.roundActive,
         screenTransitionTime: screenTransitionChangeTime,
         onFlip: (idx) => {
-            const payload = { type: 'FLIP_CARD', index: idx };
             room.cards[idx].revealed = true;
             room.cards[idx].revealedAt = Date.now();
             syncRevealCard(idx);
-            if (net.role === 'host') broadcastToAll(payload);
-            else net.conn.send(payload);
         },
         onUnflip: (idx) => {
-            const payload = { type: 'UNFLIP_CARD', index: idx };
             room.cards[idx].revealed = false;
+            room.cards[idx].revealedAt = null;
             syncRevealCard(idx);
-            if (net.role === 'host') broadcastToAll(payload);
-            else net.conn.send(payload);
         },
         onSelect: (idx) => {
             const payload = { type: 'SELECT_CARD', index: idx };
@@ -776,7 +980,6 @@ function renderRevealStage() {
                 if (!room.cards[currentFlipIdx].revealed) {
                     room.cards[currentFlipIdx].revealed = true;
                     syncRevealCard(currentFlipIdx);
-                    broadcastToAll({ type: 'FLIP_CARD', index: currentFlipIdx });
                 }
                 currentFlipIdx++;
                 setTimeout(autoProcessBotSubject, 1500);
@@ -789,10 +992,6 @@ function renderRevealStage() {
                     CardSystem.render();
                     const selection = { type: 'SELECT_CARD', index: winningIdx };
                     handleData(selection, null);
-                    net.connections.forEach(connection => {
-                        if (!connection.open) return;
-                        try { connection.send(selection); } catch (e) {}
-                    });
                 }
             }
         }
