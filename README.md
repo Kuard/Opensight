@@ -7,8 +7,9 @@ local JSON files.
 ## Run
 
 Serve this folder over HTTP or HTTPS, then open `index.html`. A static server is
-required because the game fetches its question files and audio asset; opening the
-HTML file directly with `file://` will not work reliably.
+required because the game fetches its question files; opening the HTML file
+directly with `file://` will not work reliably. UI sounds are synthesized in
+the browser.
 
 ## File ownership
 

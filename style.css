@@ -388,6 +388,93 @@ textarea,
     letter-spacing: 1px;
 }
 
+@media (max-width: 500px), (max-height: 600px) {
+    #scrLobby .room-code-display {
+        margin: 0;
+        font-size: clamp(52px, 15vw, 64px);
+        line-height: .95;
+    }
+
+    #scrLobby .room-section .brand-subtitle {
+        font-size: 17px;
+    }
+
+    #scrLobby .room-section .btn-outline {
+        margin: 4px auto;
+        padding: 2px 12px;
+    }
+
+    #scrLobby .section-title {
+        margin: 4px 0;
+        font-size: 20px;
+    }
+
+    #modeSelectionContainer {
+        margin: 2px 8px !important;
+    }
+
+    #modeSelectionContainer .section-title {
+        margin: 4px 0 6px !important;
+        font-size: 20px !important;
+    }
+
+    #btnModeClassic,
+    #btnModeCoin {
+        padding: 8px 4px !important;
+        font-size: 22px !important;
+    }
+
+    #lobbyPlayerGrid {
+        margin: 2px 0 4px;
+    }
+
+    #scrLobby .deck-grid {
+        gap: 2px;
+        margin-bottom: 2px;
+    }
+
+    #scrLobby .deck-pill {
+        padding: 4px 2px 3px;
+    }
+
+    #scrLobby .deck-icon {
+        width: 24px;
+        height: 24px;
+        margin-bottom: 1px;
+    }
+
+    #scrLobby .deck-title {
+        font-size: 16px;
+    }
+
+    #scrLobby .deck-subtitle {
+        font-size: 12px;
+    }
+
+    #scrLobby .round-grid {
+        margin: 3px 0 6px;
+    }
+
+    #scrLobby .round-val {
+        width: 48px;
+        height: 48px;
+        font-size: 17px;
+    }
+
+    #scrLobby .round-sub {
+        font-size: 13px;
+    }
+
+    #hostStartBtn {
+        position: sticky;
+        bottom: calc(8px + env(safe-area-inset-bottom));
+        z-index: 10;
+        flex-shrink: 0;
+        margin: 8px 0 0 !important;
+        box-shadow: 0 -10px 16px var(--paper), 3px 4px 0 var(--line-soft);
+    }
+}
+
 .game-toast {
     position: fixed;
     z-index: 1000;

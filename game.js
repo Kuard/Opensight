@@ -7,23 +7,14 @@ if (navigator.audioSession && 'type' in navigator.audioSession) {
     } catch (error) {
         console.warn('Could not enable audio mixing with other apps.', error);
     }
-}
+};
 
 const Sound = {
     ctx: null,
     volume: 1,
-    // Public-domain "Pencil Scratchings" by gypsygirl: https://commons.wikimedia.org/wiki/File:Pencil_scratchings.ogg
-    drawingAudio: (() => {
-        const audio = new Audio('drawing.mp3');
-        audio.preload = 'auto';
-        audio.volume = 1;
-        return audio;
-    })(),
-    drawingStopTimer: null,
     setVolume(value) {
         const volume = Number(value);
         this.volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 1;
-        this.drawingAudio.volume = this.volume;
     },
     init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
     play(freq, type, duration) {
@@ -32,35 +23,37 @@ const Sound = {
             this.init();
             const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
             osc.type = type; osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            gain.gain.setValueAtTime(0.12 * this.volume, this.ctx.currentTime);
+            gain.gain.setValueAtTime(0.04 * this.volume, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
             osc.connect(gain); gain.connect(this.ctx.destination);
             osc.start(); osc.stop(this.ctx.currentTime + duration);
         } catch(e) {}
     },
     draw() {
-        this.playDrawingSound();
+        this.playSketchSound(false);
     },
     drawRound() {
-        this.playDrawingSound();
+        this.playSketchSound(true);
     },
-    playDrawingSound() {
+    playSketchSound(isRound) {
         if (this.volume === 0) return;
         try {
-            const audio = this.drawingAudio;
-            audio.pause();
-            audio.currentTime = 0;
-            clearTimeout(this.drawingStopTimer);
-            const playPromise = audio.play();
-            if (playPromise && typeof playPromise.catch === 'function') {
-                playPromise.catch(error => console.warn('Could not play drawing.mp3.', error));
-            }
-            this.drawingStopTimer = setTimeout(() => {
-                audio.pause();
-                audio.currentTime = 0;
-            }, 650);
+            this.init();
+            const now = this.ctx.currentTime;
+            const duration = isRound ? 0.13 : 0.09;
+            const oscillator = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(isRound ? 360 : 480, now);
+            oscillator.frequency.exponentialRampToValueAtTime(isRound ? 220 : 300, now + duration);
+            gain.gain.setValueAtTime(0.035 * this.volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            oscillator.connect(gain);
+            gain.connect(this.ctx.destination);
+            oscillator.start(now);
+            oscillator.stop(now + duration);
         } catch (error) {
-            console.warn('Could not play drawing.mp3.', error);
+            console.warn('Could not synthesize UI sound.', error);
         }
     }
 };
