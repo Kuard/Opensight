@@ -51,9 +51,14 @@ textarea,
     width: 100%;
     max-width: 420px;
     height: 100%;
-    margin: 0 auto;
-    padding: calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
-        calc(12px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+    height: 100dvh;
+    margin-inline: auto;
+    --app-edge: clamp(5px, 1.4vh, 12px);
+    --app-edge: clamp(5px, 1.4dvh, 12px);
+    padding: calc(var(--app-edge) + env(safe-area-inset-top))
+        calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-right))
+        calc(var(--app-edge) + env(safe-area-inset-bottom))
+        calc(clamp(8px, 3vw, 16px) + env(safe-area-inset-left));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -108,7 +113,7 @@ textarea,
 #osSettingsBtn {
     position: absolute;
     z-index: 50;
-    top: calc(17px + env(safe-area-inset-top));
+    top: calc(var(--app-edge) + 5px + env(safe-area-inset-top));
     left: calc(16px + env(safe-area-inset-left));
 }
 
@@ -388,86 +393,391 @@ textarea,
     letter-spacing: 1px;
 }
 
-@media (max-width: 500px), (max-height: 600px) {
+@media (max-width: 500px), (max-height: 650px) {
+    .app-container {
+        padding-left: calc(clamp(6px, 2.5vw, 12px) + env(safe-area-inset-left));
+        padding-right: calc(clamp(6px, 2.5vw, 12px) + env(safe-area-inset-right));
+    }
+
+    #osSettingsBtn,
+    .lobby-header .circle-btn {
+        width: 34px;
+        height: 40px;
+        zoom: 1;
+    }
+
+    .app-container button,
+    .app-container .deck-pill,
+    .app-container .round-pill,
+    .app-container .circle-btn {
+        zoom: 1;
+    }
+
+    #osSettingsBtn {
+        top: calc(var(--app-edge) + env(safe-area-inset-top));
+    }
+
+    .lobby-header .circle-btn {
+        top: auto;
+    }
+
+    .lobby-header {
+        min-height: 40px;
+        margin-bottom: 4px;
+    }
+
+    #scrMenu .brand-header,
+    #scrJoin .brand-header {
+        margin-bottom: clamp(12px, 3dvh, 24px) !important;
+    }
+
+    #scrMenu .brand-title {
+        font-size: clamp(42px, 17vw, 64px) !important;
+    }
+
+    .brand-subtitle {
+        font-size: clamp(15px, 4.5vw, 19px);
+    }
+
+    #scrMenu .input-field,
+    #scrJoin .input-field {
+        margin-bottom: 10px;
+        padding: 9px 12px;
+        font-size: 19px;
+    }
+
+    #scrMenu .btn-main,
+    #scrMenu .btn-secondary,
+    #scrJoin .btn-main,
+    #scrJoin .btn-secondary {
+        padding: 8px 12px;
+        font-size: 19px;
+    }
+
+    #scrLobby {
+        overflow: hidden;
+        padding: 0 4px;
+        margin: 0 -4px;
+    }
+
+    #scrLobby > .lobby-header {
+        min-height: 40px;
+        margin-bottom: 2px;
+    }
+
     #scrLobby .room-code-display {
         margin: 0;
-        font-size: clamp(52px, 15vw, 64px);
-        line-height: .95;
+        font-size: clamp(40px, 12vw, 56px);
+        line-height: .9;
     }
 
     #scrLobby .room-section .brand-subtitle {
-        font-size: 17px;
+        font-size: clamp(12px, 4vw, 16px);
+        line-height: 1.15;
     }
 
     #scrLobby .room-section .btn-outline {
-        margin: 4px auto;
-        padding: 2px 12px;
+        margin: 2px auto;
+        padding: 1px 8px;
+        font-size: 13px;
+    }
+
+    #scrLobby .lobby-status {
+        margin: 0;
+        font-size: clamp(14px, 4.5vw, 18px);
     }
 
     #scrLobby .section-title {
-        margin: 4px 0;
-        font-size: 20px;
-    }
-
-    #modeSelectionContainer {
-        margin: 2px 8px !important;
-    }
-
-    #modeSelectionContainer .section-title {
-        margin: 4px 0 6px !important;
-        font-size: 20px !important;
-    }
-
-    #btnModeClassic,
-    #btnModeCoin {
-        padding: 8px 4px !important;
-        font-size: 22px !important;
+        margin: 2px 0;
+        font-size: clamp(15px, 5vw, 19px);
     }
 
     #lobbyPlayerGrid {
-        margin: 2px 0 4px;
+        gap: 3px;
+        margin: 1px 0 3px;
+    }
+
+    #scrLobby .player-pill {
+        gap: 4px;
+        padding: 2px 7px;
+        font-size: 12px;
+    }
+
+    #scrLobby #modeSelectionContainer {
+        margin: 0 4px !important;
+    }
+
+    #scrLobby #modeSelectionContainer .section-title {
+        margin: 2px 0 4px !important;
+        font-size: clamp(14px, 4.5vw, 18px) !important;
+    }
+
+    #scrLobby #btnModeClassic,
+    #scrLobby #btnModeCoin {
+        padding: clamp(3px, 1.2dvh, 8px) 3px !important;
+        font-size: clamp(16px, 5vw, 21px) !important;
+    }
+
+    #classicOnlyControls > .section-title {
+        margin: 2px 0 !important;
+        font-size: clamp(14px, 4.5vw, 18px) !important;
     }
 
     #scrLobby .deck-grid {
         gap: 2px;
-        margin-bottom: 2px;
+        margin: 0 0 3px;
     }
 
     #scrLobby .deck-pill {
-        padding: 4px 2px 3px;
+        padding: clamp(2px, .6dvh, 4px) 1px;
     }
 
     #scrLobby .deck-icon {
-        width: 24px;
-        height: 24px;
-        margin-bottom: 1px;
+        width: clamp(17px, 5.5vw, 24px);
+        height: clamp(17px, 5.5vw, 24px);
+        margin: 0 0 1px;
     }
 
     #scrLobby .deck-title {
-        font-size: 16px;
+        font-size: clamp(11px, 3.7vw, 15px);
+        line-height: 1.1;
     }
 
     #scrLobby .deck-subtitle {
-        font-size: 12px;
+        font-size: clamp(9px, 2.8vw, 11px);
+        line-height: 1;
     }
 
     #scrLobby .round-grid {
-        margin: 3px 0 6px;
+        gap: 2px;
+        margin: 1px 0 2px;
+    }
+
+    #scrLobby .round-pill {
+        padding: 5px 0 1px;
     }
 
     #scrLobby .round-val {
-        width: 48px;
-        height: 48px;
-        font-size: 17px;
+        width: clamp(32px, 10vw, 42px);
+        height: clamp(32px, 10vw, 42px);
+        margin-bottom: 1px;
+        font-size: clamp(12px, 4vw, 15px);
+    }
+
+    #scrLobby .round-val::before {
+        top: -6px;
+        height: 4px;
     }
 
     #scrLobby .round-sub {
-        font-size: 13px;
+        font-size: clamp(9px, 3vw, 12px);
     }
 
     #hostStartBtn {
         flex-shrink: 0;
-        margin: 8px 0 0 !important;
+        margin: 3px 0 0 !important;
+        padding: clamp(6px, 1.5dvh, 9px) 10px;
+        font-size: clamp(16px, 5vw, 19px);
+    }
+
+    #clientWaitNotice {
+        padding: 4px 0 !important;
+        font-size: 12px;
+    }
+
+    #scrWriterInput {
+        overflow: hidden;
+    }
+
+    #scrWriterInput .prompt-box,
+    #scrSubjectLounge .prompt-box,
+    #scrRevealStage .prompt-box {
+        max-height: 26dvh;
+        overflow: auto;
+        margin-bottom: 6px;
+        padding: clamp(8px, 2dvh, 14px);
+    }
+
+    #scrWriterInput .prompt-text,
+    #scrSubjectLounge .prompt-text,
+    #scrRevealStage .prompt-text {
+        font-size: clamp(16px, 5vw, 20px);
+    }
+
+    #scrWriterInput .timer-display {
+        margin: 2px 0;
+        font-size: clamp(26px, 8vw, 34px);
+    }
+
+    #scrWriterInput .card-textarea {
+        flex: 1 1 auto;
+        min-height: 0;
+        padding: 10px;
+        font-size: 17px;
+    }
+
+    #scrWriterInput .char-count {
+        flex: 0 0 auto;
+        margin: 2px 0 4px;
+        font-size: 13px;
+    }
+
+    #scrWriterInput #lockInBtn {
+        position: static;
+        flex: 0 0 auto;
+        margin: 4px 0 0 !important;
+        padding: 8px 10px;
+        font-size: 17px;
+    }
+
+    #scrSubjectLounge > .brand-subtitle,
+    #scrCoinPhase1 > .lobby-header + .brand-subtitle {
+        margin-bottom: 5px !important;
+        font-size: clamp(14px, 4vw, 17px);
+    }
+
+    #scrSubjectLounge .fidget-board,
+    #coinNonSubjectWaitingBox .fidget-board {
+        flex: 1 1 auto;
+        min-height: 0;
+        gap: 6px;
+        margin: 6px 0;
+    }
+
+    #scrSubjectLounge .fidget-toy,
+    #coinNonSubjectWaitingBox .fidget-toy {
+        min-height: 0;
+        padding: 6px;
+    }
+
+    #scrSubjectLounge .bubble-grid,
+    #coinNonSubjectWaitingBox .bubble-grid {
+        grid-template-columns: repeat(4, clamp(20px, 7vw, 28px));
+        gap: 4px;
+    }
+
+    #scrSubjectLounge .bubble,
+    #coinNonSubjectWaitingBox .bubble {
+        width: clamp(20px, 7vw, 28px);
+        height: clamp(20px, 7vw, 28px);
+    }
+
+    #scrRevealStage {
+        overflow: hidden;
+    }
+
+    #revealInstructions {
+        flex: 0 0 auto;
+        margin: 0 0 4px;
+        font-size: 14px;
+    }
+
+    #cardsWrapper {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #nextRoundBtn {
+        margin: 5px auto 0;
+    }
+
+    #scrCoinPhase1,
+    #scrCoinPhase2,
+    #scrCoinStage {
+        overflow: hidden;
+    }
+
+    #coinSubjectSelectionBox[style*="display: block"],
+    #coinNonSubjectWaitingBox[style*="display: block"] {
+        display: flex !important;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #coinSubjectSelectionBox .prompt-box {
+        max-height: 25dvh;
+        overflow: auto;
+        margin: 5px 0 !important;
+        padding: 8px;
+    }
+
+    #coinSubjectSelectionBox .prompt-text {
+        font-size: clamp(16px, 5vw, 20px);
+    }
+
+    #coinSubjectSelectionBox .section-title {
+        flex: 0 0 auto;
+        margin: 2px 0;
+        font-size: 17px;
+    }
+
+    #coinTargetPlayerGrid {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        margin-bottom: 4px !important;
+    }
+
+    #coinSubjectSelectionBox > div:last-child {
+        flex: 0 0 auto;
+    }
+
+    #scrCoinPhase2 .pill-container {
+        gap: 8px;
+        margin: 10px 0;
+    }
+
+    #scrCoinPhase2 .matrix-pill {
+        padding: clamp(10px, 3dvh, 18px) 10px;
+    }
+
+    #scrCoinStage .coin-stage {
+        flex-basis: clamp(112px, 23dvh, 170px);
+        height: clamp(112px, 23dvh, 170px);
+        margin: 2dvh 0;
+    }
+
+    #scrCoinStage .neon-coin {
+        flex-basis: clamp(96px, 30vw, 132px);
+        width: clamp(96px, 30vw, 132px);
+        height: clamp(96px, 30vw, 132px);
+    }
+
+    #coinOutcomeBanner,
+    #coinRevealedQuestionCard {
+        max-height: 24dvh;
+        overflow: auto;
+        margin-top: 5px !important;
+        margin-bottom: 5px;
+        padding: 8px;
+        font-size: 17px;
+    }
+
+    #coinNextRoundBtn {
+        flex: 0 0 auto;
+        margin-top: 4px !important;
+    }
+
+    .app-container .modal-overlay {
+        overflow: hidden;
+        padding: 8px;
+    }
+
+    .app-container .modal-card {
+        max-height: 100%;
+        overflow-y: auto;
+        padding: clamp(12px, 3dvh, 20px);
+    }
+
+    .settings-card .settings-control {
+        margin-bottom: 8px;
+    }
+
+    .settings-card .section-title {
+        margin: 0 0 4px;
     }
 }
 
@@ -509,21 +819,61 @@ textarea,
 }
 
 @media (max-width: 360px) {
-    .app-container {
-        padding-left: calc(12px + env(safe-area-inset-left));
-        padding-right: calc(12px + env(safe-area-inset-right));
-    }
-
-    #scrMenu .brand-title {
-        font-size: 58px;
-    }
-
-    .brand-subtitle {
-        font-size: 18px;
-    }
-
     .player-pill {
-        padding: 5px 10px;
+        padding: 3px 7px;
+        font-size: 12px;
+    }
+}
+
+@media (max-height: 540px) {
+    .app-container {
+        --app-edge: 5px;
+    }
+
+    #scrLobby .room-code-display {
+        font-size: clamp(34px, 11vw, 46px);
+    }
+
+    #scrLobby .room-section .brand-subtitle {
+        font-size: 11px;
+    }
+
+    #scrLobby .lobby-status {
+        font-size: 13px;
+    }
+
+    #scrLobby .section-title {
         font-size: 14px;
+    }
+
+    #scrLobby #modeSelectionContainer .section-title,
+    #scrLobby #classicOnlyControls > .section-title {
+        font-size: 13px !important;
+    }
+
+    #scrLobby #btnModeClassic,
+    #scrLobby #btnModeCoin {
+        padding: 2px !important;
+        font-size: 15px !important;
+    }
+
+    #scrLobby .deck-icon {
+        width: 15px;
+        height: 15px;
+    }
+
+    #scrLobby .deck-pill {
+        padding: 1px;
+    }
+
+    #scrLobby .round-val {
+        width: 29px;
+        height: 29px;
+        font-size: 11px;
+    }
+
+    #hostStartBtn {
+        padding: 4px 8px;
+        font-size: 15px;
     }
 }

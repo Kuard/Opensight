@@ -19,6 +19,18 @@
     touch-action: pan-y;
 }
 
+#cardsWrapper.cards-viewport-wrapper {
+    min-height: 0;
+    height: auto;
+    flex: 1 1 auto;
+}
+
+#cardsWrapper .cards-viewport-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+}
+
 .cards-viewport-stage {
     position: relative;
     width: 100%;

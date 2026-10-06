@@ -314,12 +314,10 @@ button,
 .theme-opt.active { border-color: var(--line); }
 
 #nextRoundBtn { margin: 24px auto 0; display: block; flex-shrink: 0; }
-#scrWriterInput { overflow-y: auto; }
+#scrWriterInput { overflow: hidden; }
 #scrWriterInput #lockInBtn {
-    position: sticky;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    position: static;
     margin-top: 8px;
-    z-index: 5;
 }
 
 .modal-overlay {

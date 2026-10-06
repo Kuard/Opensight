@@ -63,7 +63,7 @@
     height: 180px;
 }
 
-#scrCoinStage { overflow-y: auto; }
+#scrCoinStage { overflow: hidden; }
 #coinOutcomeBanner,
 #coinRevealedQuestionCard { flex-shrink: 0; }
 
