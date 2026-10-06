@@ -108,7 +108,7 @@ textarea,
 #osSettingsBtn {
     position: absolute;
     z-index: 50;
-    top: calc(12px + env(safe-area-inset-top));
+    top: calc(17px + env(safe-area-inset-top));
     left: calc(16px + env(safe-area-inset-left));
 }
 
@@ -466,12 +466,8 @@ textarea,
     }
 
     #hostStartBtn {
-        position: sticky;
-        bottom: calc(8px + env(safe-area-inset-bottom));
-        z-index: 10;
         flex-shrink: 0;
         margin: 8px 0 0 !important;
-        box-shadow: 0 -10px 16px var(--paper), 3px 4px 0 var(--line-soft);
     }
 }
 
