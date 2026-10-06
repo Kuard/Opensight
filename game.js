@@ -124,6 +124,8 @@ function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     $(id).scrollTop = 0;
+
+    if (id === 'scrWriterInput') resizeWriterInput($('writerInput'));
     
     if (id === 'scrRevealStage') {
         screenTransitionChangeTime = Date.now();
@@ -276,10 +278,18 @@ function leaveRoom() {
 }
 
 // ── WORD COUNTER ─────────────────────────────────────────────
+function resizeWriterInput(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const maxHeight = parseFloat(getComputedStyle(textarea).maxHeight);
+    textarea.style.height = `${Math.min(textarea.scrollHeight, Number.isFinite(maxHeight) ? maxHeight : textarea.scrollHeight)}px`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const wi = $('writerInput');
     const cc = $('charCount');
     if (wi && cc) {
+        resizeWriterInput(wi);
         wi.addEventListener('input', function() {
             let wordsCount = (this.value.match(/\S+/g) || []).length;
             if (wordsCount > 120) {
@@ -289,6 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     wordsCount = 120;
                 }
             }
+            resizeWriterInput(this);
             cc.innerText = `${wordsCount} / 120 words`;
         });
     }

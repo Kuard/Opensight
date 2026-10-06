@@ -115,3 +115,33 @@
 .coin-fidget-board .bubble-grid {
     width: max-content;
 }
+
+:root[data-theme="dark"] .fidget-toy {
+    background: var(--fidget-surface);
+    border-color: var(--line-soft);
+}
+
+:root[data-theme="dark"] .switch-track {
+    background: var(--fidget-track);
+    border-color: var(--line-soft);
+}
+
+:root[data-theme="dark"] .switch-handle {
+    background: var(--fidget-handle);
+    box-shadow: 1px 2px 0 rgba(0, 0, 0, .45);
+}
+
+:root[data-theme="dark"] .switch-track.on {
+    background: var(--good);
+    border-color: var(--line);
+}
+
+:root[data-theme="dark"] .bubble {
+    background: var(--fidget-bubble);
+    border-color: var(--line-soft);
+}
+
+:root[data-theme="dark"] .bubble.popped {
+    background: var(--fidget-bubble-popped);
+    border-color: var(--line-soft);
+}

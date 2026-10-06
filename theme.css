@@ -85,4 +85,9 @@
     --text-primary: var(--ink);
     --text-secondary: var(--ink-soft);
     --text-dark: var(--ink-faint);
+    --fidget-surface: #383a40;
+    --fidget-track: #4a4c53;
+    --fidget-handle: #d0cdbf;
+    --fidget-bubble: #44464d;
+    --fidget-bubble-popped: #292a2e;
 }

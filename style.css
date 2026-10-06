@@ -153,11 +153,11 @@ textarea,
     margin: 2px 0;
     color: var(--ink);
     background:
-        radial-gradient(circle at 10% 62%, var(--ink) 0 3px, transparent 4px),
-        radial-gradient(circle at 17% 28%, var(--ink) 0 2px, transparent 3px),
-        radial-gradient(circle at 88% 20%, var(--ink) 0 4px, transparent 5px),
-        radial-gradient(circle at 93% 36%, var(--ink) 0 2px, transparent 3px),
-        radial-gradient(circle at 74% 92%, var(--ink-faint) 0 5px, transparent 7px);
+        radial-gradient(circle at 14% 62%, var(--ink) 0 3px, transparent 4px),
+        radial-gradient(circle at 20% 28%, var(--ink) 0 2px, transparent 3px),
+        radial-gradient(circle at 82% 20%, var(--ink) 0 4px, transparent 5px),
+        radial-gradient(circle at 87% 36%, var(--ink) 0 2px, transparent 3px),
+        radial-gradient(circle at 68% 92%, var(--ink-faint) 0 5px, transparent 7px);
     font-family: var(--font-brush);
     font-size: clamp(58px, 19vw, 84px);
     letter-spacing: 3px;
@@ -467,8 +467,10 @@ textarea,
 
     #scrLobby .room-code-display {
         margin: 0;
+        padding-inline: 10px;
         font-size: clamp(40px, 12vw, 56px);
         line-height: .9;
+        transform: none;
     }
 
     #scrLobby .room-section .brand-subtitle {
@@ -610,10 +612,13 @@ textarea,
     }
 
     #scrWriterInput .card-textarea {
-        flex: 1 1 auto;
-        min-height: 0;
+        flex: 0 0 auto;
+        height: 76px;
+        min-height: 76px;
+        max-height: min(32dvh, 220px);
         padding: 10px;
         font-size: 17px;
+        overflow-y: auto;
     }
 
     #scrWriterInput .char-count {
