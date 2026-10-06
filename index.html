@@ -7,12 +7,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>OpenSight - Party Game Engine</title>
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=20261006-2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="OpenSight">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon_small.png">
-    <link rel="apple-touch-icon" href="icons/icon_large.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon_small.png?v=20261006-2">
+    <link rel="apple-touch-icon" href="icons/icon_large.png?v=20261006-2">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -446,6 +446,7 @@
   vibrationSlider.addEventListener('input',function(){
     var value=Number(vibrationSlider.value);
     window.Vibrations.setIntensity(value/100);
+    window.Vibrations.preview();
     vibrationValue.value=value+'%';
     vibrationValue.textContent=value+'%';
     vibrationHint.textContent=value===0?'Vibrations are off.':'Set to 0% to turn vibrations off.';

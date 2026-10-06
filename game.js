@@ -1,6 +1,14 @@
 // ── UTILITIES ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
+if (navigator.audioSession && 'type' in navigator.audioSession) {
+    try {
+        navigator.audioSession.type = 'ambient';
+    } catch (error) {
+        console.warn('Could not enable audio mixing with other apps.', error);
+    }
+}
+
 const Sound = {
     ctx: null,
     volume: 1,

@@ -19,6 +19,14 @@ const Vibrations = {
         const intensity = Number(value);
         this.intensity = Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 1;
     },
+    _lastPreviewAt: 0,
+    preview() {
+        if (!this.enabled || this.intensity === 0 || !this._api) return;
+        const now = Date.now();
+        if (now - this._lastPreviewAt < 120) return;
+        this._lastPreviewAt = now;
+        try { this._api(Math.max(20, Math.round(100 * this.intensity))); } catch (e) {}
+    },
 
     // Low-level primitive. Safe no-op if vibration is unsupported or disabled.
     _raw(pattern) {
