@@ -91,6 +91,7 @@
         <div class="modal-title">Blackjack Rules</div>
         <div class="modal-desc blackjack-rules-copy">
             <p>This is a quick player-versus-player version. There is no dealer: everyone draws from one shuffled 52-card deck and competes for the best hand.</p>
+            <p>Anyone in the lobby can enter and join the table. The first player seated is the table lead and can deal each hand; only the lobby host can add the test bot.</p>
             <ul>
                 <li>Everyone starts with two cards.</li>
                 <li>2–10 are worth their number; J, Q and K are worth 10.</li>
@@ -99,7 +100,7 @@
                 <li>Going over 21 is a bust and cannot win.</li>
                 <li>The closest total to 21 wins. A two-card 21 (Ace plus a 10-value card) beats any other 21. Tied best hands share the win; if everyone busts, nobody wins.</li>
             </ul>
-            <p>Other players' cards stay hidden until the hand ends. This quick-play version has no splits, doubles, insurance, or dealer.</p>
+            <p>Other players' cards stay hidden until the hand ends. The table lead can end a hand early. This quick-play version has no splits, doubles, insurance, or house dealer.</p>
         </div>
         <button type="button" class="btn-main" onclick="Blackjack.closeRules()">Got it</button>
     </div>
@@ -484,9 +485,9 @@
 <script src="buttons.js?v=20261109-blackjack-screen"></script>
 <script src="coinMode.js"></script>
 <script src="players.js?v=20261109-lobby-blackjack"></script>
-<script src="blackjack.js?v=20261109-blackjack-screen"></script>
+<script src="blackjack.js?v=20261110-table-dealer"></script>
 <script src="gambling.js?v=20261110-gambling-module-settings"></script>
-<script src="game.js?v=20261110-gambling-module-settings"></script>
+<script src="game.js?v=20261110-blackjack-dealer"></script>
 
 <script>
 (function(){

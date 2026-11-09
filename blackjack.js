@@ -4,6 +4,7 @@ const Blackjack = {
         open: false,
         phase: 'waiting',
         participants: [],
+        dealer: '',
         hands: {},
         stood: [],
         stoodCount: 0,
@@ -64,7 +65,7 @@ const Blackjack = {
 
     reset() {
         this.clearBotTurn();
-        this.state = { open: false, phase: 'waiting', participants: [], hands: {}, stood: [], stoodCount: 0, deck: [], results: [] };
+        this.state = { open: false, phase: 'waiting', participants: [], dealer: '', hands: {}, stood: [], stoodCount: 0, deck: [], results: [] };
         this.myHand = [];
         this.myStanding = false;
         this.render();
@@ -81,22 +82,16 @@ const Blackjack = {
         if (net.role === 'host' && !this.state.open) {
             this.state.open = true;
             this.broadcastState();
+        } else if (net.role === 'client' && !this.state.open) {
+            this.state.open = true;
+            this.render();
+            this.sendRequest({ type: 'BLACKJACK_OPEN' });
         }
-        if (!this.state.open) return;
         showScreen('scrBlackjack');
     },
 
     exitTable() {
-        if (net.role === 'host') {
-            this.state.open = false;
-            this.clearBotTurn();
-            this.state = { open: false, phase: 'waiting', participants: [], hands: {}, stood: [], stoodCount: 0, deck: [], results: [] };
-            this.myHand = [];
-            this.myStanding = false;
-            this.broadcastState();
-        } else if (this.state.participants.includes(net.myName)) {
-            this.sendRequest({ type: 'BLACKJACK_LEAVE' });
-        }
+        if (this.state.participants.includes(net.myName)) this.sendRequest({ type: 'BLACKJACK_LEAVE' });
         showScreen('scrLobby');
     },
 
@@ -152,26 +147,38 @@ const Blackjack = {
     },
 
     start() {
-        if (net.role !== 'host' || room.phase !== 'lobby' || !this.state.open ||
-            !['waiting', 'results'].includes(this.state.phase)) return;
-        this.handleHostMessage({ type: 'BLACKJACK_START', player: net.myName }, null);
+        if (room.phase !== 'lobby' || !this.state.open ||
+            !['waiting', 'results'].includes(this.state.phase) ||
+            this.state.dealer !== net.myName || this.state.participants.length < 2) return;
+        this.sendRequest({ type: 'BLACKJACK_START' });
     },
 
     endEarly() {
-        if (net.role !== 'host' || this.state.phase !== 'playing') return;
-        this.handleHostMessage({ type: 'BLACKJACK_END', player: net.myName }, null);
+        if (this.state.phase !== 'playing' || this.state.dealer !== net.myName) return;
+        this.sendRequest({ type: 'BLACKJACK_END' });
     },
 
     handleHostMessage(data, connection) {
-        if (net.role !== 'host' || room.phase !== 'lobby' || !this.state.open) return;
+        if (net.role !== 'host' || room.phase !== 'lobby') return;
         const player = connection ? connection._kickName : data.player;
         const isTestBot = !connection && player === this.testBotName &&
             this.state.participants.includes(this.testBotName);
         if (!player || (!isTestBot && !room.players.includes(player)) ||
             (connection && connection._kickName !== player)) return;
 
+        if (data.type === 'BLACKJACK_OPEN') {
+            if (!connection) return;
+            if (!this.state.open) this.state.open = true;
+            this.broadcastState();
+            return;
+        }
+        if (!this.state.open) return;
+
         if (data.type === 'BLACKJACK_JOIN' && ['waiting', 'results'].includes(this.state.phase)) {
-            if (!this.state.participants.includes(player)) this.state.participants.push(player);
+            if (!this.state.participants.includes(player)) {
+                this.state.participants.push(player);
+                if (!this.state.dealer && player !== this.testBotName) this.state.dealer = player;
+            }
             this.broadcastState();
             return;
         }
@@ -181,6 +188,7 @@ const Blackjack = {
             this.state.participants = this.state.participants.filter(name => name !== player);
             delete this.state.hands[player];
             this.state.stood = this.state.stood.filter(name => name !== player);
+            if (player === this.state.dealer) this.state.dealer = this.nextDealer();
             if (this.state.phase === 'playing' && this.state.stood.length >= this.state.participants.length) {
                 if (this.state.participants.length) this.finish();
                 else {
@@ -195,7 +203,7 @@ const Blackjack = {
             this.broadcastState();
             return;
         }
-        if (data.type === 'BLACKJACK_START' && player === net.myName &&
+        if (data.type === 'BLACKJACK_START' && player === this.state.dealer &&
             ['waiting', 'results'].includes(this.state.phase) && this.state.participants.length >= 2) {
             this.clearBotTurn();
             this.state.phase = 'playing';
@@ -218,7 +226,7 @@ const Blackjack = {
             else this.scheduleBotTurn();
             return;
         }
-        if (data.type === 'BLACKJACK_END' && player === net.myName && this.state.phase === 'playing') {
+        if (data.type === 'BLACKJACK_END' && player === this.state.dealer && this.state.phase === 'playing') {
             this.finish();
             return;
         }
@@ -243,6 +251,11 @@ const Blackjack = {
             this.broadcastState();
             this.scheduleBotTurn();
         }
+    },
+
+    nextDealer(excludedPlayer = '') {
+        return this.state.participants.find(player =>
+            player !== this.testBotName && player !== excludedPlayer) || '';
     },
 
     scheduleBotTurn() {
@@ -288,9 +301,10 @@ const Blackjack = {
     onPlayerDisconnected(player) {
         if (net.role !== 'host' || !this.state.participants.includes(player)) return;
         if (this.state.phase === 'waiting') {
-            this.state.participants = this.state.participants.filter(name => name !== player);
+            if (player === this.state.dealer) this.state.dealer = this.nextDealer(player);
             this.broadcastState();
         } else if (this.state.phase === 'playing' && !this.state.stood.includes(player)) {
+            if (player === this.state.dealer) this.state.dealer = this.nextDealer(player);
             this.state.stood.push(player);
             if (this.state.stood.length >= this.state.participants.length) this.finish();
             else this.broadcastState();
@@ -299,13 +313,21 @@ const Blackjack = {
 
     onPlayerLeft(player) {
         if (net.role !== 'host' || !this.state.participants.includes(player)) return;
-        if (this.state.phase === 'waiting') {
-            this.state.participants = this.state.participants.filter(name => name !== player);
+        this.state.participants = this.state.participants.filter(name => name !== player);
+        delete this.state.hands[player];
+        this.state.stood = this.state.stood.filter(name => name !== player);
+        if (player === this.state.dealer) this.state.dealer = this.nextDealer();
+        if (this.state.phase === 'playing' && this.state.participants.length > 0 &&
+            this.state.stood.length >= this.state.participants.length) {
+            this.finish();
+        } else if (this.state.phase === 'playing' && this.state.participants.length === 0) {
+            this.state.phase = 'waiting';
+            this.state.hands = {};
+            this.state.deck = [];
+            this.state.results = [];
             this.broadcastState();
-        } else if (this.state.phase === 'playing') {
-            if (!this.state.stood.includes(player)) this.state.stood.push(player);
-            if (this.state.stood.length >= this.state.participants.length) this.finish();
-            else this.broadcastState();
+        } else {
+            this.broadcastState();
         }
     },
 
@@ -314,6 +336,7 @@ const Blackjack = {
             open: this.state.open,
             phase: this.state.phase,
             participants: this.state.participants.slice(),
+            dealer: this.state.dealer || this.nextDealer(),
             stoodCount: this.state.stood.length,
             results: this.state.phase === 'results' ? this.state.results : []
         };
@@ -356,6 +379,9 @@ const Blackjack = {
         this.state.open = isOpen;
         this.state.phase = state.phase;
         this.state.participants = state.participants.filter(name => typeof name === 'string');
+        this.state.dealer = typeof state.dealer === 'string'
+            ? state.dealer
+            : this.nextDealer();
         this.state.stood = [];
         this.state.stoodCount = Number.isInteger(state.stoodCount) ? state.stoodCount : 0;
         this.state.hands = {};
@@ -417,7 +443,7 @@ const Blackjack = {
         const roomIsLobby = !!room && room.phase === 'lobby';
         panel.hidden = !roomIsLobby || !this.state.open;
         const lobbyButton = document.getElementById('blackjackLobbyBtn');
-        if (lobbyButton) lobbyButton.hidden = !roomIsLobby || (net.role !== 'host' && !this.state.open);
+        if (lobbyButton) lobbyButton.hidden = !roomIsLobby;
         if (panel.hidden) return;
 
         const joinButton = document.getElementById('blackjackJoinBtn');
@@ -432,6 +458,7 @@ const Blackjack = {
         const results = document.getElementById('blackjackResults');
         const isParticipant = this.state.participants.includes(net.myName);
         const isHost = net.role === 'host';
+        const isDealer = this.state.dealer === net.myName;
         const hasTestBot = this.state.participants.includes(this.testBotName);
         const ownStanding = isHost
             ? this.state.stood.includes(net.myName)
@@ -444,7 +471,7 @@ const Blackjack = {
                 : (this.state.phase === 'results' ? 'Join next hand' : 'Join Blackjack');
         }
         if (startButton) {
-            startButton.hidden = !isHost || !['waiting', 'results'].includes(this.state.phase);
+            startButton.hidden = !isDealer || !['waiting', 'results'].includes(this.state.phase);
             startButton.disabled = this.state.participants.length < 2;
             startButton.textContent = this.state.phase === 'results' ? 'Deal Again' : 'Deal Cards';
         }
@@ -452,15 +479,17 @@ const Blackjack = {
             botButton.hidden = !isHost || !['waiting', 'results'].includes(this.state.phase);
             botButton.textContent = hasTestBot ? 'Remove Test Bot' : 'Add Test Bot';
         }
-        if (endButton) endButton.hidden = !isHost || this.state.phase !== 'playing';
+        if (endButton) endButton.hidden = !isDealer || this.state.phase !== 'playing';
         if (players) {
             players.textContent = this.state.participants.length
-                ? `At the table: ${this.state.participants.join(', ')}`
+                ? `At the table: ${this.state.participants.join(', ')}${this.state.dealer ? ` · ${this.state.dealer} deals next` : ''}`
                 : 'No players have joined yet.';
         }
         if (status) {
             if (this.state.phase === 'waiting') {
-                status.textContent = 'Waiting for the host to deal (2+ players).';
+                status.textContent = isDealer
+                    ? 'You can deal when at least two players are seated.'
+                    : 'The first player to join can deal when at least two players are seated.';
             } else if (this.state.phase === 'playing') {
                 if (!isParticipant) {
                     status.textContent = 'This hand is underway. Join the next hand after the results.';

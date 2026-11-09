@@ -39,16 +39,18 @@ the browser.
 - `questions.json` and `target_questions.json` are the Classic and Coin Mode
   question pools.
 
-While waiting in the lobby, the host can open the separate Blackjack screen;
-players can enter it from the lobby header and exit back to the lobby at any
-time. The host can play too and deals when at least two people have joined.
+While waiting in the lobby, any player can open the separate Blackjack screen,
+join or leave the table, and return to the lobby at any time. The first human
+player seated becomes table lead and can deal when at least two participants
+have joined; the lobby host alone can add or remove the Blackjack test bot.
 Blackjack uses a shuffled 52-card deck, standard card values, and Aces counted
 as 1 or 11. Players independently hit or stand; the closest total at or below
 21 wins, with a two-card 21 beating other 21s and tied best hands sharing the
-win. Hands stay private until everyone stands or busts (or the host ends the
-hand). The screen's information button displays the complete rules. Blackjack
-is a waiting-room activity and does not affect the main game's score. The host
-can add one Blackjack-only test bot; it is not added to the main game roster.
+win. Hands stay private until everyone stands or busts, or the table lead ends
+the hand. The screen's information button displays the complete rules.
+Blackjack is a waiting-room activity and does not affect the
+main game's score. The test bot is Blackjack-only and is not added to the main
+game roster.
 The game's regular test bots automatically spin, use any bonus spin, and only
 begin writing after their spin sequence resolves.
 

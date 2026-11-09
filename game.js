@@ -620,7 +620,8 @@ function handleData(data, connection) {
 
         if (data.type !== 'JOIN' &&
             !['REQUEST_NEXT_ROUND', 'SUBMIT_CARD', 'SELECT_CARD', 'COMMUNITY_VOTE', 'SPIN_REQUEST', 'GAMBLE_DONE', 'USE_TIME_BOOST',
-                'BLACKJACK_JOIN', 'BLACKJACK_LEAVE', 'BLACKJACK_ACTION'].includes(data.type)) {
+                'BLACKJACK_OPEN', 'BLACKJACK_JOIN', 'BLACKJACK_LEAVE', 'BLACKJACK_START', 'BLACKJACK_ACTION',
+                'BLACKJACK_END'].includes(data.type)) {
             return;
         }
     } else if (net.role === 'client' && connection && connection !== net.conn) {
@@ -724,7 +725,8 @@ function handleData(data, connection) {
     else if (data.type === 'BLACKJACK_RESET') {
         if (typeof Blackjack !== 'undefined') Blackjack.reset();
     }
-    else if (['BLACKJACK_JOIN', 'BLACKJACK_LEAVE', 'BLACKJACK_ACTION'].includes(data.type) && net.role === 'host') {
+    else if (['BLACKJACK_OPEN', 'BLACKJACK_JOIN', 'BLACKJACK_LEAVE', 'BLACKJACK_START',
+        'BLACKJACK_ACTION', 'BLACKJACK_END'].includes(data.type) && net.role === 'host') {
         if (typeof Blackjack !== 'undefined') Blackjack.handleHostMessage(data, connection);
     }
     else if (data.type === 'SYNC_CATEGORY') {
