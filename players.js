@@ -65,6 +65,7 @@ function updateLobbyUI() {
         startBtn.disabled = count < 3;
         startBtn.innerText = count < 3 ? `Need ${needed} more player${needed > 1 ? 's' : ''}...` : "Start Game";
     }
+    if (typeof Blackjack !== 'undefined') Blackjack.render();
 }
 
 // ── ROSTER MUTATION ───────────────────────────────────────────────────────────
@@ -75,7 +76,8 @@ function updateLobbyUI() {
 function kickPlayer(name) {
     disconnectPlayerConnection(name);
     room.players = room.players.filter(p => p !== name);
-    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, playedQuestions: room.playedQuestions });
+    if (typeof Blackjack !== 'undefined') Blackjack.onPlayerLeft(name);
+    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gamblingEnabled: room.gamblingEnabled, playedQuestions: room.playedQuestions });
     updateLobbyUI();
     Vibrate.click();
 }
@@ -88,7 +90,7 @@ function addTestBots() {
     ['bot1', 'bot2', 'bot3'].forEach(bot => {
         if (!room.players.includes(bot)) room.players.push(bot);
     });
-    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, playedQuestions: room.playedQuestions });
+    broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, gamblingEnabled: room.gamblingEnabled, playedQuestions: room.playedQuestions });
     updateLobbyUI();
     Sound.play(500, 'sine', 0.1);
     Vibrate.tap();

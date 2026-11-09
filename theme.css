@@ -1,6 +1,7 @@
 /* Shared sketchbook palette and typography tokens. Component styles live beside their components. */
 :root {
     --font-hand: 'Outfit', sans-serif;
+    --font-hand-emoji: 'Outfit', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     --font-brush: 'Caveat Brush', 'Permanent Marker', cursive;
     --hd: 255px 15px 225px 15px / 15px 225px 15px 255px;
     --hd2: 15px 225px 15px 255px / 225px 15px 255px 15px;

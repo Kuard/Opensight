@@ -116,7 +116,7 @@ const CoinMode = {
 
         // Broadcast the change so connected clients update their local state
         if (net.role === 'host') {
-            broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, maxRounds: room.maxRounds, roundCount: room.roundCount, scores: room.scores, lateJoiners: room.lateJoiners });
+            broadcastToAll({ type: 'SYNC_LOBBY', players: room.players, category: room.currentCategory, gameMode: room.gameMode, gamblingEnabled: room.gamblingEnabled, maxRounds: room.maxRounds, roundCount: room.roundCount, scores: room.scores, lateJoiners: room.lateJoiners });
         }
     },
 
@@ -228,14 +228,8 @@ const CoinMode = {
     },
 
     drawNextSubject() {
-        const previous = coinState.previousSubject;
-        let eligible = room.players.filter(p => p !== previous);
-
-        if (eligible.length === 0) {
-            eligible = room.players.slice();
-        }
-
-        const next = eligible[Math.floor(Math.random() * eligible.length)] || room.players[0];
+        room.subjectCounts = room.subjectCounts || {};
+        const next = selectFairSubject(room.players, room.subjectCounts, coinState.previousSubject);
         coinState.previousSubject = next;
         return next;
     },
@@ -277,11 +271,19 @@ const CoinMode = {
         if (coinState.nextSubjectOverride && room.players.includes(coinState.nextSubjectOverride)) {
             coinState.subject = coinState.nextSubjectOverride;
             coinState.nextSubjectOverride = null;
+            room.subjectCounts = room.subjectCounts || {};
+            room.subjectCounts[coinState.subject] = (room.subjectCounts[coinState.subject] || 0) + 1;
             coinState.previousSubject = coinState.subject;
         } else {
             coinState.subject = this.drawNextSubject();
         }
 
+        if (!coinState.subject) {
+            room.roundCount--;
+            coinState.active = false;
+            coinState.phase = 'lobby';
+            return;
+        }
         room.currentSubject = coinState.subject;
         coinState.question = this.drawUnusedQuestion(coinState.selectedCategory);
 

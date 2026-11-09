@@ -1,13 +1,13 @@
 /**
  * Insight - Card System & Viewport Engine
  * Manages the card viewport, navigation, double-tap reveal, and long-press
- * winner selection.
+ * vote and winner selection.
  *
  * Interaction model:
  *  - Tap a neighboring (non-centered) card  -> navigate to it (no reveal)
  *  - Tap arrows                             -> navigate
  *  - Double-tap the centered card -> reveal or hide it on this device only
- *  - Long-press a fully revealed, centered card -> select as winner
+ *  - Long-press a fully revealed, centered card -> vote or select a winner
  * A single pointer gesture only ever resolves to ONE of: navigate / reveal /
  * long-press-select. They are disambiguated in handlePointerUp/timers below
  * so a normal tap can't accidentally reveal.
@@ -22,6 +22,7 @@ const CardSystem = {
     onFlipCallback: null,
     onUnflipCallback: null,
     onSelectCallback: null,
+    canSelectCallback: null,
     gestureAttached: false,
 
     // ── Gesture tuning ──
@@ -30,6 +31,8 @@ const CardSystem = {
     DOUBLE_TAP_MAX_DELAY: 350,      // ms between taps to count as a double-tap
     LONG_PRESS_MS: 550,             // ms of holding still to trigger winner selection
     LONG_PRESS_MAX_MOVEMENT: 12,    // px - moving past this cancels a pending long press
+    CARD_SIDE_OFFSET: 128,
+    CARD_STACK_OFFSETS: [246, 357, 462, 562],
 
     init(container, cards, options = {}) {
         this.container = typeof container === 'string' ? document.getElementById(container) : container;
@@ -41,6 +44,7 @@ const CardSystem = {
         this.onFlipCallback = options.onFlip || null;
         this.onUnflipCallback = options.onUnflip || null;
         this.onSelectCallback = options.onSelect || null;
+        this.canSelectCallback = options.canSelect || null;
 
         const selectedIdx = this.cards.findIndex(c => c.selected);
         if (selectedIdx !== -1) {
@@ -142,6 +146,7 @@ const CardSystem = {
                     </button>
                 </div>
             </div>
+            <span class="my-community-vote-dot" aria-label="Your community vote"></span>
         `;
 
         const copyBtn = el.querySelector('.card-copy-btn');
@@ -165,8 +170,11 @@ const CardSystem = {
         const copyBtn = el.querySelector('.card-copy-btn');
         const frontLabelEl = el.querySelector('.card-front-label');
 
-        el.classList.remove('selected', 'is-flipped');
-        el.classList.remove('winner-selected', 'is-charging');
+        el.classList.remove('selected', 'is-flipped', 'community-favorite', 'subject-favorite');
+        el.classList.remove('winner-selected', 'is-charging', 'has-my-community-vote');
+        if (card.communityFavorite) el.classList.add('community-favorite');
+        if (card.subjectFavorite || card.selected) el.classList.add('subject-favorite');
+        if (card.myCommunityVote) el.classList.add('has-my-community-vote');
         el.style.removeProperty('--charge-progress');
 
         if (card.selected) {
@@ -194,6 +202,7 @@ const CardSystem = {
             if (authorEl) authorEl.style.display = 'none';
             if (copyBtn) copyBtn.style.display = 'none';
         }
+
     },
 
     async copyCardText(idx, button) {
@@ -278,29 +287,35 @@ const CardSystem = {
             const diff = idx - this.focusIndex;
             const wasFlipped = el.classList.contains('is-flipped');
             const wasSelected = el.classList.contains('selected');
+            const wasCommunityFavorite = el.classList.contains('community-favorite');
+            const wasSubjectFavorite = el.classList.contains('subject-favorite');
+            const wasMyCommunityVote = el.classList.contains('has-my-community-vote');
 
             if (diff === 0) {
                 el.className = 'reveal-card-scene pos-center';
                 el.style.transform = `translateX(0px) translateY(0px) scale(1) rotate(0deg)`;
                 el.style.zIndex = '30';
                 el.style.opacity = '1';
+                el.style.visibility = 'visible';
                 el.style.pointerEvents = 'auto';
             } else if (diff === -1) {
                 el.className = 'reveal-card-scene pos-left';
-                el.style.transform = `translateX(-105px) translateY(12px) scale(0.88) rotate(-6deg)`;
+                el.style.transform = `translateX(-${this.CARD_SIDE_OFFSET}px) translateY(12px) scale(0.88) rotate(-6deg)`;
                 el.style.zIndex = '20';
                 el.style.opacity = '1';
+                el.style.visibility = 'visible';
                 el.style.pointerEvents = 'auto';
             } else if (diff === 1) {
                 el.className = 'reveal-card-scene pos-right';
-                el.style.transform = `translateX(105px) translateY(12px) scale(0.88) rotate(6deg)`;
+                el.style.transform = `translateX(${this.CARD_SIDE_OFFSET}px) translateY(12px) scale(0.88) rotate(6deg)`;
                 el.style.zIndex = '20';
                 el.style.opacity = '1';
+                el.style.visibility = 'visible';
                 el.style.pointerEvents = 'auto';
             } else if (diff < -1) {
                 const stackDepth = Math.min(4, Math.abs(diff) - 1);
                 el.className = 'reveal-card-scene pos-stacked-left';
-                const offsetX = -105 - (stackDepth * 8);
+                const offsetX = -this.CARD_STACK_OFFSETS[stackDepth - 1];
                 const offsetY = 12 + (stackDepth * 6);
                 const scale = Math.max(0.65, 0.88 - (stackDepth * 0.06));
                 const rot = -6 - (stackDepth * 2);
@@ -308,11 +323,12 @@ const CardSystem = {
                 el.style.transform = `translateX(${offsetX}px) translateY(${offsetY}px) scale(${scale}) rotate(${rot}deg)`;
                 el.style.zIndex = `${15 - stackDepth}`;
                 el.style.opacity = '1';
+                el.style.visibility = 'visible';
                 el.style.pointerEvents = 'none';
             } else if (diff > 1) {
                 const stackDepth = Math.min(4, diff - 1);
                 el.className = 'reveal-card-scene pos-stacked-right';
-                const offsetX = 105 + (stackDepth * 8);
+                const offsetX = this.CARD_STACK_OFFSETS[stackDepth - 1];
                 const offsetY = 12 + (stackDepth * 6);
                 const scale = Math.max(0.65, 0.88 - (stackDepth * 0.06));
                 const rot = 6 + (stackDepth * 2);
@@ -320,6 +336,7 @@ const CardSystem = {
                 el.style.transform = `translateX(${offsetX}px) translateY(${offsetY}px) scale(${scale}) rotate(${rot}deg)`;
                 el.style.zIndex = `${15 - stackDepth}`;
                 el.style.opacity = '1';
+                el.style.visibility = 'visible';
                 el.style.pointerEvents = 'none';
             }
 
@@ -327,6 +344,9 @@ const CardSystem = {
             // (revealed/selected) that live independently of screen position.
             if (wasFlipped) el.classList.add('is-flipped');
             if (wasSelected) el.classList.add('selected');
+            if (wasCommunityFavorite) el.classList.add('community-favorite');
+            if (wasSubjectFavorite) el.classList.add('subject-favorite');
+            if (wasMyCommunityVote) el.classList.add('has-my-community-vote');
         });
 
         const counter = this.container ? this.container.querySelector('.cards-counter-badge') : null;
@@ -389,13 +409,16 @@ const CardSystem = {
         if (this.onUnflipCallback) this.onUnflipCallback(idx);
     },
 
-    // Select the centered card as winner. Only valid when centered + revealed.
+    // Long press selects a card for the active phase. Only valid when centered + revealed.
     selectCentered() {
         const idx = this.focusIndex;
         const card = this.cards[idx];
         if (!card || !card.revealed) return;
         if (this.cards.some(c => c.selected)) return; // winner already chosen
-        if (!this.isMeSubject) return;
+        const canSelect = this.canSelectCallback
+            ? this.canSelectCallback(card, idx)
+            : this.isMeSubject;
+        if (!canSelect) return;
         if (Date.now() - this.screenTransitionTime < 1000) return; // ignore stray presses right after screen transition
 
         if (typeof Sound !== 'undefined' && Sound.play) Sound.play(280, 'sine', 0.15);
@@ -438,10 +461,16 @@ const CardSystem = {
             if (!activeCardEl) return;
             const startedAt = performance.now();
             activeCardEl.classList.add('is-charging');
+            if (typeof Vibrations !== 'undefined' && Vibrations.charge) {
+                Vibrations.charge(0);
+            }
             const updateCharge = (now) => {
                 if (!activeCardEl) return;
                 const progress = Math.min(1, (now - startedAt) / this.LONG_PRESS_MS);
                 activeCardEl.style.setProperty('--charge-progress', progress.toString());
+                if (typeof Vibrations !== 'undefined' && Vibrations.charge) {
+                    Vibrations.charge(progress);
+                }
                 if (progress < 1) chargeFrame = requestAnimationFrame(updateCharge);
             };
             chargeFrame = requestAnimationFrame(updateCharge);
@@ -473,7 +502,10 @@ const CardSystem = {
 
             // Long press only ever makes sense on the centered, revealed card.
             const card = this.cards[activeIdx];
-            if (this.isMeSubject && isCentered && card && card.revealed && !card.selected) {
+            const canLongPressSelect = card && (this.canSelectCallback
+                ? this.canSelectCallback(card, activeIdx)
+                : this.isMeSubject);
+            if (canLongPressSelect && isCentered && card && card.revealed && !card.selected) {
                 startCharge();
                 longPressTimer = setTimeout(() => {
                     longPressFired = true;

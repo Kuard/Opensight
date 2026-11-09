@@ -101,6 +101,77 @@ function updateNextRoundButtonState() {
 
 const Buttons = {
 
+	gamblingSpin() {
+		if (net.myName === Gambling.subject || Gambling.localState.spinning ||
+			Gambling.localState.requestPending || Gambling.localState.spinsRemaining <= 0) return;
+		Sound.play(420, 'triangle', 0.1);
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Gambling.requestSpin();
+	},
+
+	gamblingSkip() {
+		if (net.myName === Gambling.subject || Gambling.localState.spinning ||
+			Gambling.localState.resultHolding || Gambling.localState.requestPending) return;
+		Sound.play(260, 'sine', 0.07);
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Gambling.skip();
+	},
+
+	blackjackJoin() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.requestJoin();
+	},
+
+	blackjackOpen() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.openTable();
+	},
+
+	blackjackExit() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.exitTable();
+	},
+
+	blackjackAddBot() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.addOrRemoveTestBot();
+	},
+
+	blackjackStart() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.start();
+	},
+
+	blackjackHit() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		Sound.draw();
+		return Blackjack.hit();
+	},
+
+	blackjackStand() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		Sound.play(360, 'triangle', 0.08);
+		return Blackjack.stand();
+	},
+
+	blackjackEnd() {
+		if (typeof Vibrate !== 'undefined' && Vibrate.click) Vibrate.click();
+		return Blackjack.endEarly();
+	},
+
+	useTimeBoost() {
+		if (Gambling.localState.timeBoostPending || Gambling.localState.storedTime < 15 ||
+			net.myName === Gambling.subject || !room.activeWriters.includes(net.myName) ||
+			room.cards.some(card => card.creator === net.myName)) return;
+		Sound.play(560, 'triangle', 0.12);
+		if (typeof Vibrate !== 'undefined' && Vibrate.success) Vibrate.success();
+		return Gambling.useTimeBoost();
+	},
+
+	submitWriterCard() {
+		return submitWriterCard();
+	},
+
 	coinTarget(playerName) {
 		return CoinMode.selectTargetPlayer(playerName);
 	},

@@ -10,34 +10,56 @@
 const Vibrations = {
     enabled: true,
     intensity: 1,
+    _lastCallAt: 0,
+    _lastPreviewAt: 0,
+    _lastChargeAt: 0,
 
-    _api: navigator.vibrate ? navigator.vibrate.bind(navigator)
-        : (navigator.mozVibrate ? navigator.mozVibrate.bind(navigator) : null),
-
-    isSupported() { return Boolean(this._api); },
+    _getApi() {
+        if (typeof navigator === 'undefined') return null;
+        if (typeof navigator.vibrate === 'function') return navigator.vibrate.bind(navigator);
+        if (typeof navigator.mozVibrate === 'function') return navigator.mozVibrate.bind(navigator);
+        return null;
+    },
+    isSupported() { return Boolean(this._getApi()); },
     setIntensity(value) {
         const intensity = Number(value);
         this.intensity = Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 1;
     },
-    _lastPreviewAt: 0,
     preview() {
-        if (!this.enabled || this.intensity === 0 || !this._api) return;
+        if (!this.enabled || this.intensity === 0 || !this.isSupported()) return;
         const now = Date.now();
         if (now - this._lastPreviewAt < 120) return;
         this._lastPreviewAt = now;
-        try { this._api(Math.max(20, Math.round(100 * this.intensity))); } catch (e) {}
+        this._raw(Math.max(20, Math.round(100 * this.intensity)));
+    },
+    charge(progress) {
+        if (!this.enabled || this.intensity === 0 || !this.isSupported()) return;
+        const now = Date.now();
+        if (now - this._lastChargeAt < 140) return;
+        this._lastChargeAt = now;
+        const normalizedProgress = Number.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+        this._raw(Math.round(8 + normalizedProgress * 18));
     },
 
     // Low-level primitive. Safe no-op if vibration is unsupported or disabled.
     _raw(pattern) {
         if (!this.enabled || this.intensity === 0) return;
-        if (!this._api) return;
+        const api = this._getApi();
+        if (!api) return;
+        const now = Date.now();
+        if (now - this._lastCallAt < 80) return;
+        if (navigator.userActivation && navigator.userActivation.isActive === false) return;
         const scaledPattern = Array.isArray(pattern)
             ? pattern.map((duration, index) => index % 2 === 0
                 ? Math.max(1, Math.round(duration * this.intensity))
                 : duration)
             : Math.max(1, Math.round(pattern * this.intensity));
-        try { this._api(scaledPattern); } catch (e) {}
+        this._lastCallAt = now;
+        try {
+            api(scaledPattern);
+        } catch (error) {
+            // Browsers may expose the API but reject calls in restricted contexts.
+        }
     },
 
     // ── Named patterns (existing behavior, preserved as-is) ──
@@ -61,3 +83,13 @@ const Vibrate = Vibrations;
 // Inline HTML handlers access the compatibility alias through window.
 window.Vibrations = Vibrations;
 window.Vibrate = Vibrations;
+
+document.addEventListener('click', event => {
+    const target = event.target instanceof Element
+        ? event.target.closest('button, .circle-btn, .deck-pill, .round-pill, .game-setting-toggle, .player-pill, .btn-cat')
+        : null;
+    if (!target || target.hasAttribute('disabled') ||
+        target.getAttribute('aria-disabled') === 'true' ||
+        target.dataset.haptic === 'none') return;
+    Vibrations.click();
+});

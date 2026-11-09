@@ -283,14 +283,12 @@ function createLiveRoom() {
         $('botAddBtn').style.display = 'flex';
         resetLobbyDefaultsUI();
         updateLobbyUI();
+        Gambling.renderSetting();
         showScreen('scrLobby');
     });
 
     peer.on('connection', (connection) => {
         _log('incoming connection', connection.peer);
-        // Tracked immediately so it is already in the broadcast list once open. It is
-        // not tied to a player until its JOIN is processed (see attachPlayerConnection).
-        net.connections.push(connection);
 
         connection.on('data', (data) => {
             if (connection._superseded) return; // replaced by a newer connection - no longer speaks for anyone
@@ -304,17 +302,6 @@ function createLiveRoom() {
 
         connection.on('open', () => {
             _log('connection open', connection.peer);
-            connection.send({
-                type: 'SYNC_LOBBY',
-                players: room.players,
-                category: room.currentCategory,
-                gameMode: room.gameMode,
-                playedQuestions: room.playedQuestions,
-                maxRounds: room.maxRounds,
-                roundCount: room.roundCount,
-                scores: room.scores,
-                lateJoiners: room.lateJoiners
-            });
         });
 
         connection.on('close', () => _handleConnectionLost(connection, 'close'));

@@ -18,12 +18,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&family=Caveat+Brush&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-    <link rel="stylesheet" href="theme.css?v=20261006-ui6">
-    <link rel="stylesheet" href="style.css?v=20261006-ui6">
+    <link rel="stylesheet" href="theme.css?v=20261110-emoji-font-fallback">
+    <link rel="stylesheet" href="style.css?v=20261110-emoji-font-fallback">
     <link rel="stylesheet" href="buttons.css?v=20261006-ui6">
-    <link rel="stylesheet" href="cards.css?v=20261006-ui6">
+    <link rel="stylesheet" href="cards.css?v=20261110-visible-vote-dot">
     <link rel="stylesheet" href="fidget.css?v=20261006-ui6">
     <link rel="stylesheet" href="coinmode.css?v=20261006-ui6">
+    <link rel="stylesheet" href="blackjack.css?v=20261110-larger-menu">
+    <link rel="stylesheet" href="gambling.css?v=20261110-toggle-style">
 </head>
 
 <body>
@@ -81,6 +83,25 @@
             <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
             <button class="btn-main" onclick="acceptNSFWConfirmation()">Continue</button>
         </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="blackjackRulesModal" onclick="if(event.target===this)Blackjack.closeRules()">
+    <div class="modal-card">
+        <div class="modal-title">Blackjack Rules</div>
+        <div class="modal-desc blackjack-rules-copy">
+            <p>This is a quick player-versus-player version. There is no dealer: everyone draws from one shuffled 52-card deck and competes for the best hand.</p>
+            <ul>
+                <li>Everyone starts with two cards.</li>
+                <li>2–10 are worth their number; J, Q and K are worth 10.</li>
+                <li>An Ace counts as 11 when that keeps you at 21 or below; otherwise it counts as 1.</li>
+                <li>Choose <strong>Hit</strong> to draw one card or <strong>Stand</strong> to keep your total. At 21 you stand automatically.</li>
+                <li>Going over 21 is a bust and cannot win.</li>
+                <li>The closest total to 21 wins. A two-card 21 (Ace plus a 10-value card) beats any other 21. Tied best hands share the win; if everyone busts, nobody wins.</li>
+            </ul>
+            <p>Other players' cards stay hidden until the hand ends. This quick-play version has no splits, doubles, insurance, or dealer.</p>
+        </div>
+        <button type="button" class="btn-main" onclick="Blackjack.closeRules()">Got it</button>
     </div>
 </div>
 
@@ -202,8 +223,14 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </div>
             <div class="brand-title">LOBBY</div>
-            <div class="circle-btn" onclick="triggerLeaveConfirmation()" title="Leave Room">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <div class="lobby-header-actions">
+                <button type="button" class="circle-btn blackjack-lobby-open-btn" id="blackjackLobbyBtn"
+                    aria-label="Open Blackjack" title="Blackjack" hidden onclick="Buttons.blackjackOpen()">
+                    <span aria-hidden="true">21</span>
+                </button>
+                <button type="button" class="circle-btn" onclick="triggerLeaveConfirmation()" title="Leave Room" aria-label="Leave Room">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
             </div>
         </div>
 
@@ -267,6 +294,14 @@
             </div>
 
             <div id="classicOnlyControls">
+            <label class="game-setting-toggle" for="gamblingEnabledToggle">
+                <span>
+                    <strong>Slot machine</strong>
+                    <small id="gamblingSettingStatus">Enabled for every round</small>
+                </span>
+                <input id="gamblingEnabledToggle" type="checkbox" checked onchange="Gambling.setEnabled(this.checked)">
+                <span class="game-setting-switch" aria-hidden="true"></span>
+            </label>
             <div class="section-title">Choose Your Deck</div>
             <div class="deck-grid">
                 <div class="deck-pill active" id="deckPillClassic" onclick="setCategory('classic', this)">
@@ -322,6 +357,42 @@
         <p class="sub-track" id="clientWaitNotice" style="display:none; text-align:center; padding:20px 0; color: var(--neon-pink);">WAITING FOR HOST...</p>
     </div>
 
+    <div class="screen blackjack-screen" id="scrBlackjack">
+        <div class="lobby-header blackjack-screen-header">
+            <div class="brand-title">BLACKJACK</div>
+            <button type="button" class="circle-btn blackjack-exit-btn" id="blackjackExitBtn"
+                aria-label="Exit Blackjack" title="Exit Blackjack" onclick="Buttons.blackjackExit()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m10 17 5-5-5-5"></path>
+                    <path d="M15 12H3"></path>
+                    <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path>
+                </svg>
+            </button>
+        </div>
+        <section class="blackjack-lobby" id="blackjackLobby" aria-labelledby="blackjackLobbyTitle">
+            <div class="blackjack-lobby-heading">
+                <h2 id="blackjackLobbyTitle">Table</h2>
+                <button type="button" class="blackjack-info-btn" aria-label="Blackjack rules"
+                    title="Blackjack rules" onclick="Blackjack.openRules()">i</button>
+            </div>
+            <div id="blackjackStatus" class="blackjack-status"></div>
+            <div id="blackjackPlayers" class="blackjack-players"></div>
+            <div id="blackjackOwnHand" class="blackjack-card-row" hidden></div>
+            <div id="blackjackOwnScore" class="blackjack-own-score" hidden></div>
+            <div id="blackjackActions" class="blackjack-actions" hidden>
+                <button type="button" class="btn-main" onclick="Buttons.blackjackHit()">Hit</button>
+                <button type="button" class="btn-secondary" onclick="Buttons.blackjackStand()">Stand</button>
+            </div>
+            <div id="blackjackResults" class="blackjack-results" hidden></div>
+            <div class="blackjack-lobby-buttons">
+                <button type="button" class="btn-secondary" id="blackjackJoinBtn" onclick="Buttons.blackjackJoin()">Join Blackjack</button>
+                <button type="button" class="btn-secondary" id="blackjackBotBtn" hidden onclick="Buttons.blackjackAddBot()">Add Test Bot</button>
+                <button type="button" class="btn-main" id="blackjackStartBtn" hidden onclick="Buttons.blackjackStart()">Deal Cards</button>
+                <button type="button" class="btn-secondary" id="blackjackEndBtn" hidden onclick="Buttons.blackjackEnd()">End Hand</button>
+            </div>
+        </section>
+    </div>
+
     <div class="screen" id="scrSubjectLounge">
         <div class="lobby-header">
             <div class="circle-btn" style="opacity: 0;"></div>
@@ -337,6 +408,30 @@
             <div class="fidget-toy"><div class="clicker-btn" id="toyClicker">0</div></div>
             <div class="fidget-toy"><div class="switch-track" id="toyToggle"><div class="switch-handle"></div></div></div>
             <div class="fidget-toy" style="grid-column: span 2;"><div class="bubble-grid" id="toyBubbleGrid"></div></div>
+        </div>
+    </div>
+
+    <div class="screen gambling-screen" id="scrGambling" aria-live="polite">
+        <button type="button" class="circle-btn gambling-skip-top" id="gamblingSkipButton"
+            aria-label="Skip gamble" title="Skip gamble" onclick="Buttons.gamblingSkip()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m5 5 10 7-10 7z"></path>
+                <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
+        </button>
+        <div class="gambling-machine">
+            <div class="gambling-cabinet">
+                <div class="gambling-marquee">LUCKY DRAW</div>
+                <div class="gambling-reel-window">
+                    <div class="gambling-reels" id="gamblingReels">◆  ◆  ◆</div>
+                </div>
+                <div class="gambling-status" id="gamblingStatus"></div>
+                <button type="button" class="btn-main gambling-spin-button" id="gamblingSpinButton" onclick="Buttons.gamblingSpin()">Start Spin</button>
+                <div class="gambling-symbol-guide">
+                    <div class="gambling-guide-title">Three matching symbols win</div>
+                    <div class="gambling-legend" id="gamblingLegend"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -356,7 +451,8 @@
         <textarea class="card-textarea" id="writerInput" placeholder="Write your answer..." maxlength="500"></textarea>
         <div class="char-count" id="charCount">0 / 120 words</div>
 
-        <button class="btn-main" id="lockInBtn" onclick="submitWriterCard()">Lock In Card</button>
+        <button class="btn-main" id="lockInBtn" onclick="Buttons.submitWriterCard()">Lock In Card</button>
+        <button type="button" class="btn-secondary time-boost-button" id="useTimeBoostBtn" onclick="Buttons.useTimeBoost()" hidden></button>
     </div>
 
     <div class="screen" id="scrRevealStage">
@@ -375,19 +471,22 @@
         <div id="cardsWrapper"></div>
 
         <button class="btn-main" id="nextRoundBtn" style="display:none; margin-top:20px;">Next Round</button>
+        <button class="btn-secondary" id="returnLobbyBtn" style="display:none; margin-top:10px;">Return to Lobby</button>
     </div>
 
 </div>
 
-<script src="vibrations.js"></script>
-<script src="networking.js"></script>
-<script src="cards.js"></script>
+<script src="vibrations.js?v=20261110-all-button-haptics"></script>
+<script src="networking.js?v=20261110-gambling-module-settings"></script>
+<script src="cards.js?v=20261110-vote-dot"></script>
 <script src="bots.js"></script>
 <script src="fidget.js"></script>
-<script src="buttons.js"></script>
+<script src="buttons.js?v=20261109-blackjack-screen"></script>
 <script src="coinMode.js"></script>
-<script src="players.js"></script>
-<script src="game.js"></script>
+<script src="players.js?v=20261109-lobby-blackjack"></script>
+<script src="blackjack.js?v=20261109-blackjack-screen"></script>
+<script src="gambling.js?v=20261110-gambling-module-settings"></script>
+<script src="game.js?v=20261110-gambling-module-settings"></script>
 
 <script>
 (function(){
