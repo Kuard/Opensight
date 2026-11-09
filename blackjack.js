@@ -172,9 +172,8 @@ const Blackjack = {
             this.broadcastState();
             return;
         }
-        if (!this.state.open) return;
-
         if (data.type === 'BLACKJACK_JOIN' && ['waiting', 'results'].includes(this.state.phase)) {
+            this.state.open = true;
             if (!this.state.participants.includes(player)) {
                 this.state.participants.push(player);
                 if (!this.state.dealer && player !== this.testBotName) this.state.dealer = player;
@@ -182,6 +181,7 @@ const Blackjack = {
             this.broadcastState();
             return;
         }
+        if (!this.state.open) return;
         if (data.type === 'BLACKJACK_LEAVE' &&
             ['waiting', 'playing', 'results'].includes(this.state.phase) &&
             this.state.participants.includes(player)) {
