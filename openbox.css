@@ -1,0 +1,575 @@
+#scrOpenbox {
+    justify-content: flex-start;
+}
+
+.openbox-page {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: clamp(8px, 1.8dvh, 14px);
+    overflow: auto;
+    padding: 2px 0 8px;
+    color: var(--ink);
+}
+
+.openbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 42px;
+    border-bottom: 1px solid var(--line-soft);
+    padding-left: 56px;
+    padding-bottom: 6px;
+}
+
+.openbox-header .game-leave-button {
+    align-self: flex-start;
+}
+
+.openbox-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-family: var(--font-brush);
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    line-height: 1;
+}
+
+.openbox-round,
+.openbox-category-label {
+    color: var(--ink-soft);
+    font-family: var(--font-hand);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.openbox-phase-title {
+    margin-top: 2px;
+    font-size: clamp(19px, 5vw, 25px);
+    font-weight: 850;
+    line-height: 1.05;
+    text-align: center;
+}
+
+.openbox-question,
+.openbox-waiting,
+.openbox-skip-reason {
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--paper-hi);
+    color: var(--ink);
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.openbox-question {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.openbox-waiting,
+.openbox-skip-reason {
+    color: var(--ink-soft);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.openbox-subject-line {
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.openbox-countdown {
+    align-self: center;
+    min-width: 62px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--paper-hi);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    padding: 4px 12px;
+    text-align: center;
+}
+
+.openbox-field-label {
+    display: block;
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .7px;
+    margin-bottom: 4px;
+}
+
+#openboxAnswerInput {
+    width: 100%;
+    min-height: 82px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--field);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.35;
+    padding: 9px 10px;
+    resize: vertical;
+}
+
+#openboxAnswerInput::placeholder {
+    color: var(--ink-faint);
+}
+
+.openbox-primary-action {
+    width: 100%;
+    min-height: 42px;
+    margin-top: 2px;
+}
+
+.openbox-choice-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.openbox-choice-row button {
+    min-height: 42px;
+}
+
+.openbox-progress {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 5px 8px;
+    align-items: center;
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.openbox-progress-count {
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.openbox-progress-bar {
+    grid-column: 1 / -1;
+    height: 6px;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    background: var(--paper-hi);
+}
+
+.openbox-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--good);
+    transition: width .2s ease;
+}
+
+.openbox-vote-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 8px;
+}
+
+.openbox-vote-title {
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.openbox-answer-option {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: var(--paper-hi);
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.25;
+    padding: 7px 9px;
+    text-align: left;
+}
+
+.openbox-answer-option:active {
+    border-color: var(--good);
+    background: color-mix(in srgb, var(--good) 14%, var(--paper));
+}
+
+.openbox-prompt-subject {
+    color: var(--ink-soft);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .6px;
+}
+
+.openbox-vote-locked {
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.openbox-reveal-list,
+.openbox-score-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.openbox-reveal-answer,
+.openbox-truth-result,
+.openbox-score-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: 7px;
+    background: var(--paper-hi);
+    padding: 7px 8px;
+}
+
+.openbox-reveal-answer.correct {
+    border-color: var(--good);
+    background: color-mix(in srgb, var(--good) 12%, var(--paper));
+}
+
+.openbox-answer-number,
+.openbox-score-rank {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--line-soft);
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.openbox-answer-text,
+.openbox-score-name {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.openbox-answer-details {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.openbox-answer-author,
+.openbox-vote-attribution,
+.openbox-fooled-voters {
+    color: var(--ink-soft);
+    font-size: 9px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.openbox-fooled-voters {
+    color: var(--bad, #a52e42);
+    font-weight: 800;
+}
+
+.openbox-reveal-subject,
+.openbox-truth-reveal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.openbox-correct-label {
+    flex: 0 0 auto;
+    color: var(--good);
+    font-size: 8px;
+    letter-spacing: .5px;
+}
+
+.openbox-truth-result {
+    justify-content: space-between;
+}
+
+.openbox-truth-subject {
+    overflow-wrap: anywhere;
+    font-size: 12px;
+}
+
+.openbox-truth-value {
+    min-width: 58px;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 900;
+    padding: 4px 8px;
+    text-align: center;
+}
+
+.openbox-truth-value.true {
+    border-color: var(--good);
+    color: var(--good);
+}
+
+.openbox-truth-value.false {
+    color: var(--mark);
+}
+
+.openbox-score-row {
+    min-height: 30px;
+}
+
+.openbox-score-value {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.openbox-lobby-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 1px;
+}
+
+#scrLobby #openboxOnlyControls[hidden] {
+    display: none;
+}
+
+.openbox-lobby-controls > .section-title {
+    margin: 1px 2px;
+    font-size: 12px;
+}
+
+.openbox-mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px;
+    margin: 2px 0 4px;
+    padding: 3px;
+    border: 1px solid var(--line-soft);
+    border-radius: 9px;
+    background: var(--face);
+}
+
+.openbox-mode-option {
+    position: relative;
+    display: grid !important;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.openbox-mode-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.openbox-mode-option span {
+    display: grid;
+    min-height: 38px;
+    place-items: center;
+    padding: 4px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.openbox-mode-option:hover span {
+    border-color: var(--line-soft);
+}
+
+.openbox-mode-option input:checked + span {
+    background: var(--ink);
+    color: var(--paper);
+    box-shadow: 0 2px 0 var(--line-soft);
+}
+
+.openbox-mode-option input:focus-visible + span {
+    outline: 2px solid var(--mark);
+    outline-offset: 2px;
+}
+
+.openbox-timers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0 0 2px;
+}
+
+.openbox-timer-control {
+    display: flex !important;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding: 7px 9px 5px;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    background: var(--card);
+    cursor: pointer;
+}
+
+.openbox-timer-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    color: var(--ink-soft);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.openbox-timer-heading output {
+    color: var(--ink);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+#scrLobby .openbox-timer-control input[type="range"] {
+    width: 100%;
+    min-width: 0;
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    accent-color: var(--mark);
+    cursor: pointer;
+    touch-action: pan-y;
+    appearance: none;
+}
+
+#scrLobby .openbox-timer-control input[type="range"]:focus-visible {
+    outline: 2px solid var(--mark);
+    outline-offset: 2px;
+    border-radius: 999px;
+}
+
+#scrLobby .openbox-timer-control input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line-soft);
+}
+
+#scrLobby .openbox-timer-control input[type="range"]::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+    margin-top: -8px;
+    appearance: none;
+    border: 2px solid var(--card);
+    border-radius: 50%;
+    background: var(--mark);
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+#scrLobby .openbox-timer-control input[type="range"]::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--line-soft);
+}
+
+#scrLobby .openbox-timer-control input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--card);
+    border-radius: 50%;
+    background: var(--mark);
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+@media (max-width: 500px), (max-height: 650px) {
+    .openbox-lobby-controls {
+        gap: 1px;
+        margin-top: 1px;
+    }
+
+    .openbox-lobby-controls > .section-title {
+        margin: 1px 2px;
+    }
+
+    #scrLobby .lobby-option-description {
+        display: none;
+    }
+
+    .openbox-mode-toggle {
+        margin: 1px 0 3px;
+    }
+
+    .openbox-mode-option span {
+        min-height: 34px;
+        font-size: 10px;
+    }
+
+    .openbox-timers {
+        gap: 5px;
+    }
+
+    .openbox-timer-control {
+        gap: 3px;
+        padding: 5px 7px 3px;
+    }
+
+    #scrLobby .openbox-timer-control input[type="range"] {
+        min-height: 30px;
+    }
+
+    #scrLobby .openbox-timer-control input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+        margin-top: -9px;
+    }
+
+    #scrLobby .openbox-timer-control input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+    }
+
+    .openbox-timer-heading {
+        font-size: 9px;
+    }
+
+    .openbox-timer-heading output {
+        font-size: 11px;
+    }
+}
+
+@media (max-height: 620px) {
+    .openbox-page {
+        gap: 6px;
+    }
+
+    .openbox-question {
+        padding: 7px 9px;
+    }
+
+    .openbox-phase-title {
+        font-size: 19px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .openbox-progress-fill {
+        transition-duration: .01ms;
+    }
+}

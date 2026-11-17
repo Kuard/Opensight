@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script>try{var _t=localStorage.getItem("opensight-theme");document.documentElement.dataset.theme=_t==="dark"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
+    <meta name="theme-color" content="#f5f7f6">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OpenSight - Party Game Engine</title>
+    
+    <link rel="manifest" href="manifest.json?v=20261006-icons3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OpenSight">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon_small.png?v=20261006-icons3">
+    <link rel="apple-touch-icon" href="icons/icon_large.png?v=20261006-icons3">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&family=Caveat+Brush&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href=".css%20files/theme.css?v=20261117-design-tokens2">
+    <link rel="stylesheet" href=".css%20files/style.css?v=20261118-visual-textures1">
+    <link rel="stylesheet" href=".css%20files/buttons.css?v=20261006-ui6">
+    <link rel="stylesheet" href=".css%20files/cards.css?v=20261119-cover-flip4">
+    <link rel="stylesheet" href=".css%20files/coinmode.css?v=20261117-coin-3d-flow2">
+    <link rel="stylesheet" href=".css%20files/blackjack.css?v=20261110-larger-menu">
+    <link rel="stylesheet" href=".css%20files/gambling.css?v=20261115-phone-slot-final3">
+    <link rel="stylesheet" href=".css%20files/phone.css?v=20261118-ui-polish4">
+    <link rel="stylesheet" href=".css%20files/openbox.css?v=20261118-ui-polish2">
+    <link rel="stylesheet" href=".css%20files/design-system.css?v=20261119-cover-flip5">
+</head>
+
+<body class="cover-scene">
+
+<div class="app-container cover-scene">
+
+<button type="button" class="circle-btn phone-launcher-btn" id="phoneLauncherBtn" onclick="Phone.openForLobby()" title="Open phone" aria-label="Open your phone" style="display:none;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4"></path></svg>
+</button>
+
+<div class="modal-overlay" id="confirmLeaveModal">
+    <div class="modal-card">
+        <div class="modal-title">Leave room?</div>
+        <div class="modal-desc">Your current game session will end for this device.</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissLeaveConfirmation()">Stay</button>
+            <button class="btn-main" onclick="confirmLeaveRoom()">Leave</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="confirmNSFWModal">
+    <div class="modal-card">
+        <div class="modal-title">18+ deck</div>
+        <div class="modal-desc">This deck contains adult prompts. Continue?</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
+            <button class="btn-main" onclick="acceptNSFWConfirmation()">Continue</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="blackjackRulesModal" onclick="if(event.target===this)Blackjack.closeRules()">
+    <div class="modal-card">
+        <div class="modal-title">Blackjack Rules</div>
+        <div class="modal-desc blackjack-rules-copy">
+            <p>This is a quick player-versus-player version. There is no dealer: everyone draws from one shuffled 52-card deck and competes for the best hand.</p>
+            <p>Anyone in the lobby can enter and join the table. The first player seated is the table lead and can deal each hand; only the lobby host can add the test bot.</p>
+            <ul>
+                <li>Everyone starts with two cards.</li>
+                <li>2–10 are worth their number; J, Q and K are worth 10.</li>
+                <li>An Ace counts as 11 when that keeps you at 21 or below; otherwise it counts as 1.</li>
+                <li>Choose <strong>Hit</strong> to draw one card or <strong>Stand</strong> to keep your total. At 21 you stand automatically.</li>
+                <li>Going over 21 is a bust and cannot win.</li>
+                <li>The closest total to 21 wins. A two-card 21 (Ace plus a 10-value card) beats any other 21. Tied best hands share the win; if everyone busts, nobody wins.</li>
+            </ul>
+            <p>Other players' cards stay hidden until the hand ends. The table lead can end a hand early. This quick-play version has no splits, doubles, insurance, or house dealer.</p>
+        </div>
+        <button type="button" class="btn-main" onclick="Blackjack.closeRules()">Got it</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="coinEasterEggModal">
+    <div class="modal-card" style="border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);">
+        <div class="modal-title" style="color: #ffd700;"> MATRIX OVERRIDE </div>
+        <div class="modal-desc">The coin landed on its edge! Choose who becomes the next Subject.</div>
+        <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
+    </div>
+</div>
+
+<div class="screen" id="scrCoinPhase1">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">COIN MODE</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+
+    <div id="coinSubjectSelectionBox" style="display:none; width:100%;">
+            <div class="brand-subtitle" style="text-align:center;">Pick a target player. The coin flips immediately.</div>
+        <div class="prompt-box" style="margin: 12px 0;"><div class="prompt-text" id="coinPromptDisplay">...</div></div>
+        <div class="section-title">Select Target Player</div>
+        <div id="coinTargetPlayerGrid" class="deck-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px;"></div>
+    </div>
+
+    <div id="coinNonSubjectWaitingBox" style="display:none; width:100%;">
+        <div class="brand-subtitle" style="text-align:center;"><span id="coinWaitSubjectName">Subject</span> is picking a target...</div>
+        <div class="sub-track" id="coinWaitTargetLabel" style="text-align:center; color: var(--neon-pink, #ff0055); margin: 10px 0; font-weight:700;">Waiting...</div>
+        
+    </div>
+
+</div>
+
+<div class="screen" id="scrCoinPhase2" style="justify-content: center;">
+    <div class="brand-header coin-matrix-header" style="text-align: center; margin-bottom: 15px;">
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">SECRET SIDE</div>
+        <div class="brand-subtitle">Choose Heads or Tails, then pick your target</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+    <div id="coinMatrixSubjectControls" style="display:none; width:100%;">
+        <div class="pill-container">
+            <button class="matrix-pill red" onclick="Buttons.coinSide('heads')">
+                <div class="pill-title">HEADS </div>
+                <div class="pill-sub">RED</div>
+            </button>
+            <button class="matrix-pill blue" onclick="Buttons.coinSide('tails')">
+                <div class="pill-title">TAILS</div>
+                <div class="pill-sub">BLUE</div>
+            </button>
+        </div>
+    </div>
+    <div id="coinMatrixWaitNotice" class="sub-track" style="display:none; text-align:center; color: var(--neon-pink, #ff0055);">Waiting...</div>
+</div>
+
+<div class="screen" id="scrCoinStage">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">THE FLIP</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+    <div class="brand-subtitle" id="coinTapInstruction" style="text-align:center; margin-bottom: 10px;">THE COIN FLIPS AUTOMATICALLY</div>
+    <div class="coin-stage">
+        <div class="neon-coin" id="neonCoinElem">
+            <div class="coin-rim" id="coinRim" aria-hidden="true"></div>
+            <div class="coin-face coin-front">HEADS</div>
+            <div class="coin-face coin-back">TAILS</div>
+        </div>
+    </div>
+    <div class="coin-outcome-banner" id="coinOutcomeBanner" style="display:none;"></div>
+    <div class="prompt-box" id="coinRevealedQuestionCard" style="display:none; margin-top:15px;">...</div>
+    <button class="btn-main" id="coinNextRoundBtn" style="display:none; margin-top:auto;">Next Coin Round</button>
+</div>
+
+    <div class="screen active" id="scrMenu">
+        <div class="notebook-stage">
+            <div class="green-notebook is-rising is-intro" id="introNotebook">
+                <div class="notebook-open-page">
+                    <div class="notebook-inside-heading">OPEN SIGHT</div>
+                    <div class="notebook-inside-subtitle">Pick your seat</div>
+                    <button type="button" class="notebook-choice notebook-host" onclick="createLiveRoom()">Host a game</button>
+                    <button type="button" class="notebook-choice notebook-join" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrJoin')">Join a room</button>
+                    <button type="button" class="cover-leave-button" onclick="leaveNotebook()">LEAVE</button>
+                </div>
+                <div class="notebook-cover-face">
+                    <div class="notebook-cover-inside" aria-hidden="true"></div>
+                    <div class="notebook-cover-content">
+                        <div class="student-nameplate">
+                            <span class="student-nameplate-title">OpenSight</span>
+                            <span class="student-nameplate-caption">Student notebook</span>
+                            <label class="cover-name-label" for="menuNameInput">Your name</label>
+                            <input type="text" class="input-field" id="menuNameInput" placeholder="Your nickname" maxlength="12" oninput="Sound.draw()">
+                        </div>
+                        <button type="button" class="cover-open-button" onclick="openNotebook()">PLAY</button>
+                        <button type="button" class="cover-leave-button" onclick="leaveNotebook()">LEAVE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen" id="scrJoin">
+        <div class="notebook-stage">
+            <div class="open-notebook-page join-notebook-page">
+                <div class="notebook-inside-heading">JOIN A ROOM</div>
+                <div class="notebook-inside-subtitle">Enter the code your host shared</div>
+                <input type="text" class="input-field room-code-input" id="joinRoomInput" placeholder="XXXX" maxlength="4" style="text-transform: uppercase;">
+                <div class="notebook-inline-error" id="joinRoomError" role="status" aria-live="polite"></div>
+                <button class="notebook-choice notebook-host" onclick="joinLiveRoom()">Connect to lobby</button>
+                <button class="notebook-choice notebook-join" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrMenu')">Back to cover</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="screen" id="scrLobby">
+        <div class="lobby-notebook-page">
+        <div class="lobby-header">
+            <div class="lobby-brand">
+                <svg class="lobby-brand-eye" viewBox="0 0 32 24" aria-hidden="true">
+                    <path d="M2 12s5-8 14-8 14 8 14 8-5 8-14 8S2 12 2 12Z"></path>
+                    <circle cx="16" cy="12" r="4"></circle>
+                </svg>
+                <span>OpenSight</span><small>v1.0</small>
+            </div>
+        </div>
+
+        <div class="room-section">
+            <div class="room-code-label">ROOM CODE</div>
+            <div class="room-code-row">
+                <div class="room-code-display" id="lobbyIdLabel">⌛</div>
+                <button type="button" class="btn-outline" id="copyRoomIdBtn" aria-label="Copy Room ID" title="Copy Room ID" onclick="copyRoomId(this)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="copy-room-label">Copy</span>
+                </button>
+            </div>
+            <div class="lobby-meta" id="lobbyMetaLabel">0 / 10 players · 10 rounds</div>
+            <div class="lobby-status" id="lobbyStatusLabel">Waiting for connection...</div>
+        </div>
+
+        <div class="lobby-scroll-area">
+        <div class="lobby-game-summary" id="lobbyReadOnlySettings" aria-label="Current game settings" hidden>
+            <div class="lobby-summary-card">
+                <span>Current mode</span>
+                <strong id="lobbyModeSummary">Classic</strong>
+                <small id="lobbyModeSummaryDescription"></small>
+            </div>
+            <div class="lobby-summary-card lobby-category-summary">
+                <span>Current category</span>
+                <strong id="lobbyCategorySummary">Party</strong>
+                <small id="lobbyCategorySummaryDescription"></small>
+            </div>
+        </div>
+
+        <div id="hostOnlyControls" style="display:none;">
+            <div class="lobby-dropdown-grid" id="lobbyDropdownControls">
+                <div class="lobby-dropdown-field">
+                    <div class="lobby-dropdown-label">
+                        <label for="lobbyModeSelect">MODE</label>
+                        <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('mode')" aria-label="Explain the selected mode">?</button>
+                    </div>
+                    <select id="lobbyModeSelect" onchange="CoinMode.setGameMode(this.value)">
+                        <option value="classic">Classic</option>
+                        <option value="coin">Coin Mode</option>
+                        <option value="casino">Casino</option>
+                        <option value="openbox">Openbox</option>
+                    </select>
+                    <p class="lobby-option-description" id="lobbyModeDescription"></p>
+                </div>
+                <div class="lobby-dropdown-field">
+                    <div class="lobby-dropdown-label">
+                        <label for="lobbyCategorySelect">CATEGORY</label>
+                        <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('category')" aria-label="Explain the selected category">?</button>
+                    </div>
+                    <select id="lobbyCategorySelect" onchange="setLobbyCategory(this.value)"></select>
+                    <p class="lobby-option-description" id="lobbyCategoryDescription"></p>
+                </div>
+            </div>
+            <details class="lobby-settings-disclosure" id="lobbySettingsDetails">
+                <summary>More settings</summary>
+                <div class="lobby-settings-content">
+                    <div id="classicOnlyControls">
+                        <label class="game-setting-toggle" for="gamblingEnabledToggle">
+                            <span>
+                                <strong>Round slot rewards</strong>
+                                <small id="gamblingSettingStatus">Enabled for every round</small>
+                            </span>
+                            <input id="gamblingEnabledToggle" type="checkbox" checked onchange="Gambling.setEnabled(this.checked)">
+                            <span class="game-setting-switch" aria-hidden="true"></span>
+                        </label>
+                        <div class="openbox-timers" aria-label="Classic time limits">
+                            <label class="openbox-timer-control" for="classicWriteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Write time</span>
+                                    <output id="classicWriteValue" for="classicWriteSeconds">45 sec</output>
+                                </span>
+                                <input id="classicWriteSeconds" type="range" min="10" max="180" step="5" value="45" aria-label="Classic writing time in seconds" oninput="updateClassicTimerPreview()" onchange="setClassicTimer('write', this.value)">
+                            </label>
+                            <label class="openbox-timer-control" for="classicVoteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Vote time</span>
+                                    <output id="classicVoteValue" for="classicVoteSeconds">30 sec</output>
+                                </span>
+                                <input id="classicVoteSeconds" type="range" min="10" max="180" step="5" value="30" aria-label="Classic voting time in seconds" oninput="updateClassicTimerPreview()" onchange="setClassicTimer('vote', this.value)">
+                            </label>
+                        </div>
+                    </div>
+                    <div id="roundLimitControls">
+                        <div class="section-title">Game Length</div>
+                        <div class="round-grid">
+                            <div class="round-pill active" data-round-limit="10" id="roundPill10" onclick="setMaxRounds(10)"><div class="round-val">10</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="30" onclick="setMaxRounds(30)"><div class="round-val">30</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="45" onclick="setMaxRounds(45)"><div class="round-val">45</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="unlimited" onclick="setMaxRounds('unlimited')">
+                                <div class="round-val">
+                                    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="24" height="24"><path d="M256,256s-48-96-126-96c-54.12,0-98,43-98,96s43.88,96,98,96c30,0,56.45-13.18,78-32" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-miterlimit:10;stroke-width:48px"></path><path d="M256,256s48,96,126,96c54.12,0,98-43,98-96s-43.88-96-98-96c-29.37,0-56.66,13.75-78,32" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-miterlimit:10;stroke-width:48px"></path></svg>
+                                </div>
+                                <div class="round-sub">Unlimited</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="coinRoundPicker" hidden>
+                        <div class="section-title">Coin Mode Length</div>
+                        <div class="round-grid coin-round-grid">
+                            <div class="round-pill btn-coin-round active" id="coinRoundPill10" onclick="CoinMode.setCoinMaxRounds(10, this)"><div class="round-val">10</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill btn-coin-round" id="coinRoundPill20" onclick="CoinMode.setCoinMaxRounds(20, this)"><div class="round-val">20</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill btn-coin-round" id="coinRoundPill30" onclick="CoinMode.setCoinMaxRounds(30, this)"><div class="round-val">30</div><div class="round-sub">Rounds</div></div>
+                        </div>
+                    </div>
+                    <div id="openboxOnlyControls" class="openbox-lobby-controls" hidden>
+                        <div class="section-title">Openbox</div>
+                        <div class="openbox-mode-toggle" role="radiogroup" aria-label="Openbox round type">
+                            <label class="openbox-mode-option" for="openboxOpenAnswerToggle">
+                                <input id="openboxOpenAnswerToggle" type="radio" name="openboxType" value="openAnswer" checked onchange="Openbox.updateLobbyConfig()">
+                                <span>Open Answer</span>
+                            </label>
+                            <label class="openbox-mode-option" for="openboxTrueFalseToggle">
+                                <input id="openboxTrueFalseToggle" type="radio" name="openboxType" value="trueFalse" onchange="Openbox.updateLobbyConfig()">
+                                <span>True / False</span>
+                            </label>
+                        </div>
+                        <div class="openbox-timers" aria-label="Openbox time limits">
+                            <label class="openbox-timer-control" for="openboxSubmitSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Write / Answer</span>
+                                    <output id="openboxSubmitValue" for="openboxSubmitSeconds">60 sec</output>
+                                </span>
+                                <input id="openboxSubmitSeconds" type="range" min="10" max="180" step="5" value="60" aria-label="Write or answer time in seconds" oninput="Openbox.updateTimerPreview()" onchange="Openbox.updateLobbyConfig()">
+                            </label>
+                            <label class="openbox-timer-control" for="openboxVoteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Vote</span>
+                                    <output id="openboxVoteValue" for="openboxVoteSeconds">45 sec</output>
+                                </span>
+                                <input id="openboxVoteSeconds" type="range" min="10" max="180" step="5" value="45" aria-label="Vote time in seconds" oninput="Openbox.updateTimerPreview()" onchange="Openbox.updateLobbyConfig()">
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary lobby-test-bots" id="botAddBtn" onclick="addTestBots()" title="Add Test Bots" style="display:none;">Add test players</button>
+                </div>
+            </details>
+        </div>
+
+        <section class="lobby-roster" aria-labelledby="lobbyPlayersTitle">
+            <div class="lobby-roster-heading">
+                <div class="section-title" id="lobbyPlayersTitle">PLAYERS</div>
+            </div>
+            <div id="lobbyPlayerGrid"></div>
+        </section>
+        </div>
+
+        <div class="lobby-footer">
+            <div class="lobby-footer-tools">
+            <button type="button" class="circle-btn lobby-settings-btn" id="lobbySettingsBtn" onclick="Phone.openSettings()" title="Settings" aria-label="Settings" hidden style="display:none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.6 1.6-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.3v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.6-1.6.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H7v-2.3h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L10 7.1l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.3v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.6 1.6-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14h-.2a1.7 1.7 0 0 0-1.7 1z"></path></svg>
+            </button>
+            <button type="button" class="circle-btn lobby-phone-btn" onclick="Phone.openForLobby()" title="Pull out phone" aria-label="Pull out phone">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4"></path></svg>
+            </button>
+            </div>
+            <div class="lobby-footer-center">
+            <button class="btn-main" id="hostStartBtn" style="display:none;" onclick="window.Vibrate && window.Vibrate.click(); broadcastStartRound()">START</button>
+            <p class="sub-track" id="clientWaitNotice" style="display:none;">WAITING FOR HOST...</p>
+            </div>
+            <div class="lobby-footer-actions">
+            <button type="button" class="circle-btn game-leave-button lobby-leave-btn" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="screen blackjack-screen" id="scrBlackjack">
+        <div class="lobby-header blackjack-screen-header">
+            <div class="brand-title">BLACKJACK</div>
+            <button type="button" class="circle-btn blackjack-exit-btn" id="blackjackExitBtn"
+                aria-label="Exit Blackjack" title="Exit Blackjack" onclick="Buttons.blackjackExit()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m10 17 5-5-5-5"></path>
+                    <path d="M15 12H3"></path>
+                    <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path>
+                </svg>
+            </button>
+        </div>
+        <section class="blackjack-lobby" id="blackjackLobby" aria-labelledby="blackjackLobbyTitle">
+            <div class="blackjack-lobby-heading">
+                <h2 id="blackjackLobbyTitle">Table</h2>
+                <button type="button" class="blackjack-info-btn" aria-label="Blackjack rules"
+                title="Blackjack rules" onclick="Phone.showLobbyHelp('category', { mode: 'casino', category: 'blackjack' })">i</button>
+            </div>
+            <div id="blackjackStatus" class="blackjack-status"></div>
+            <div id="blackjackPlayers" class="blackjack-players"></div>
+            <div id="blackjackOwnHand" class="blackjack-card-row" hidden></div>
+            <div id="blackjackOwnScore" class="blackjack-own-score" hidden></div>
+            <div id="blackjackActions" class="blackjack-actions" hidden>
+                <button type="button" class="btn-main" onclick="Buttons.blackjackHit()">Hit</button>
+                <button type="button" class="btn-secondary" onclick="Buttons.blackjackStand()">Stand</button>
+            </div>
+            <div id="blackjackResults" class="blackjack-results" hidden></div>
+            <div class="blackjack-lobby-buttons">
+                <button type="button" class="btn-secondary" id="blackjackJoinBtn" onclick="Buttons.blackjackJoin()">Join Blackjack</button>
+                <button type="button" class="btn-secondary" id="blackjackBotBtn" hidden onclick="Buttons.blackjackAddBot()">Add Test Bot</button>
+                <button type="button" class="btn-main" id="blackjackStartBtn" hidden onclick="Buttons.blackjackStart()">Deal Cards</button>
+                <button type="button" class="btn-secondary" id="blackjackEndBtn" hidden onclick="Buttons.blackjackEnd()">End Hand</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="screen" id="scrSubjectLounge">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title">THE TARGET</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
+        <div class="brand-subtitle" style="text-align:center; margin-bottom: 12px;">Players are writing about you...</div>
+        <div class="prompt-box" id="subjectPromptBox">
+            <div class="prompt-text" id="subjectPromptLabel">...</div>
+        </div>
+        <div class="sub-track" id="submissionTrackLabel" style="display:none;">0 cards locked in...</div>
+        <div class="phone-stage" id="subjectPhoneStage">
+            <button type="button" class="phone-wake-tab" id="phoneWakeTab" onclick="Phone.wakeOrDismiss()" aria-label="Open your phone">PHONE</button>
+            <section class="phone-device" id="phoneDevice" aria-label="Simulated phone" aria-hidden="true">
+                <div class="phone-top-bezel" aria-hidden="true"><span class="phone-front-camera"></span><span class="phone-earpiece"></span></div>
+                <div class="phone-screen">
+                    <div class="phone-status-bar">
+                        <span id="phoneClock">9:41</span>
+                        <span class="phone-status-icons" id="phoneStatusIcons" aria-hidden="true">▮▮▮ ◉ ▰</span>
+                        <button type="button" class="phone-settings-launch" onclick="Phone.openSettings()" aria-label="Open phone settings" title="Settings">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="phone-close" onclick="Phone.dismiss()" aria-label="Put phone away">×</button>
+                    </div>
+                    <div class="phone-notification" id="phoneNotification" role="status" aria-live="polite"></div>
+                    <div class="phone-view phone-control-view" id="phoneControlView">
+                        <div class="phone-control-heading">
+                            <span>Control Center</span>
+                            <small>Phone controls</small>
+                        </div>
+                        <button type="button" class="phone-return-to-game" id="phoneReturnToGame" onclick="Phone.returnToGame()" hidden></button>
+                        <div class="phone-controls" aria-label="Primary phone controls">
+                            <button type="button" class="phone-control is-on" data-phone-control="wifi" aria-pressed="true">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 8.5a15 15 0 0 1 19 0"></path><path d="M5.5 12a10.5 10.5 0 0 1 13 0"></path><path d="M8.8 15.5a5.5 5.5 0 0 1 6.4 0"></path><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"></circle></svg></span>
+                                <small>Wi-Fi</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="bluetooth" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"></path></svg></span>
+                                <small>Bluetooth</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="airplane" aria-label="Airplane mode" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"></path></svg></span>
+                                <small>Airplane</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="flashlight" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h8l1 5H7l1-5Z"></path><path d="M7 8h10l-1.5 3.5V21h-7v-9.5L7 8Z"></path><path d="M10 14h4"></path></svg></span>
+                                <small>Flashlight</small>
+                            </button>
+                        </div>
+                        <div class="phone-utility-controls" aria-label="Additional phone controls">
+                            <button type="button" class="phone-control phone-control-secondary" data-phone-control="dnd" aria-label="Do Not Disturb" aria-pressed="false"><span aria-hidden="true">☾</span><small>DND</small></button>
+                            <button type="button" class="phone-control phone-control-secondary" data-phone-control="rotation" aria-label="Rotation Lock" aria-pressed="false"><span aria-hidden="true">↻</span><small>Rotation</small></button>
+                        </div>
+                        <div class="phone-sliders">
+                            <label class="phone-slider-row" for="phoneBrightness">
+                                <span aria-hidden="true">☼</span><input id="phoneBrightness" type="range" min="0" max="100" value="75" aria-label="Brightness"><small>Brightness</small>
+                            </label>
+                            <label class="phone-slider-row" for="phoneVolume">
+                                <span aria-hidden="true">♪</span><input id="phoneVolume" type="range" min="0" max="100" value="35" aria-label="Volume"><small>Volume</small>
+                            </label>
+                        </div>
+                        <button type="button" class="phone-info-button" onclick="Phone.showInfo()" aria-label="Show game information">
+                            <span class="phone-info-mark" aria-hidden="true">✦</span>
+                            <span>Need a hint?</span><small>OpenSight rules guide</small>
+                            <span class="phone-info-chevron" aria-hidden="true">›</span>
+                        </button>
+                        <div class="phone-shutdown" id="phoneShutdown" hidden>Battery died. Try existing without it.</div>
+                    </div>
+                    <div class="phone-view phone-settings-view" id="phoneSettingsView" hidden>
+                        <div class="phone-settings-heading">
+                            <div>
+                                <small>OPENSIGHT DEVICE</small>
+                                <h2>Settings</h2>
+                            </div>
+                            <button type="button" class="phone-settings-back" onclick="Phone.showControls()">Done</button>
+                        </div>
+                        <div class="phone-settings-content">
+                            <section class="settings-control">
+                                <div class="settings-control-heading">
+                                    <label for="gameVolumeSlider">Game volume</label>
+                                    <output id="gameVolumeValue" for="gameVolumeSlider">100%</output>
+                                </div>
+                                <input id="gameVolumeSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+                                <div class="settings-control-hint">Adjust game sound.</div>
+                            </section>
+                            <section class="settings-control">
+                                <div class="settings-control-heading">
+                                    <label for="vibrationSlider">Vibration</label>
+                                    <output id="vibrationValue" for="vibrationSlider">100%</output>
+                                </div>
+                                <input id="vibrationSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+                                <div class="settings-control-hint" id="vibrationHint">Set to 0% to turn vibrations off.</div>
+                            </section>
+                            <div class="section-title">Theme</div>
+                            <div class="modal-actions phone-theme-options">
+                                <button type="button" class="btn-secondary theme-opt" data-theme-choice="light" onclick="osSetTheme('light')">Light</button>
+                                <button type="button" class="btn-secondary theme-opt" data-theme-choice="dark" onclick="osSetTheme('dark')">Dark</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phone-view phone-info-view" id="phoneInfoView" hidden>
+                        <header class="phone-gemini-header">
+                            <button type="button" class="phone-gemini-menu" onclick="Phone.showControls()" aria-label="Back to phone controls">☰</button>
+                            <div class="phone-gemini-model"><span>Gemini</span><small>AI</small><span aria-hidden="true">⌄</span></div>
+                            <button type="button" class="phone-gemini-compose" onclick="Phone.resetInfo()" aria-label="Start a new chat">✎</button>
+                            <span class="phone-gemini-avatar" id="phoneGeminiAvatar" aria-label="Player profile">P</span>
+                        </header>
+                        <div class="phone-chat-scroll">
+                            <div class="phone-gemini-welcome" id="phoneGeminiWelcome">
+                                <span class="phone-gemini-sparkle" aria-hidden="true">✦</span>
+                                <h2>Ready when you are</h2>
+                            </div>
+                            <div class="phone-gemini-response" id="phoneGeminiResponse" aria-live="polite" aria-atomic="false" hidden></div>
+                        </div>
+                        <div class="phone-suggestions" id="phoneSuggestions" aria-label="Suggested questions"></div>
+                        <form class="phone-input-row" onsubmit="event.preventDefault();Phone.askInfo()">
+                            <span class="phone-input-add" aria-hidden="true">+</span>
+                            <input id="phoneInfoInput" type="text" maxlength="180" placeholder="Ask Gemini" aria-label="Ask the rules guide">
+                            <span class="phone-input-mic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="13" rx="3"></rect><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"></path></svg></span>
+                            <button type="submit" aria-label="Send question">↑</button>
+                        </form>
+                    </div>
+                    <div class="phone-view phone-coin-view" id="phoneCoinView" hidden>
+                        <div class="phone-coin-panel" id="phoneCoinTargetPanel"></div>
+                        <div class="phone-coin-panel" id="phoneCoinSidePanel" hidden></div>
+                        <div class="phone-coin-panel" id="phoneCoinFlipPanel" hidden></div>
+                    </div>
+                    <div class="phone-view phone-slot-view" id="phoneSlotView" hidden>
+                        <header class="casino-app-header">
+                            <div><small id="phoneSlotKicker">OPENSIGHT CASINO</small><h2 id="phoneSlotTitle">Slot Machine</h2></div>
+                            <button type="button" class="casino-app-info" onclick="Phone.showLobbyHelp('category', { mode: 'casino', category: 'slots' })" aria-label="Slot machine rules">i</button>
+                            <button type="button" class="casino-app-close" onclick="Phone.dismiss()" aria-label="Put phone away">×</button>
+                        </header>
+                        <div class="casino-app-body">
+                            <p class="casino-app-caption" id="phoneSlotCaption">Spin the reels and see what you get.</p>
+                            <div class="casino-app-reels" id="casinoAppReels" aria-live="polite">
+                                <span>★</span><span>◆</span><span>♥</span>
+                            </div>
+                            <p class="casino-app-result" id="casinoAppResult" role="status">Ready when you are.</p>
+                            <button type="button" class="btn-main casino-app-spin" id="casinoAppSpin" onclick="Phone.spinSlot()">Spin once</button>
+                            <button type="button" class="btn-secondary gambling-skip-button phone-slot-skip" id="casinoAppSkip" onclick="Buttons.gamblingSkip()" hidden>Skip Lucky Draw</button>
+                            <details class="gambling-symbol-guide phone-slot-guide" id="phoneSlotGuide" hidden>
+                                <summary>Lucky Draw rewards</summary>
+                                <div class="gambling-legend" id="gamblingLegend"></div>
+                            </details>
+                            <div class="casino-app-bot-results" id="casinoAppBotResults" aria-live="polite" hidden></div>
+                        </div>
+                    </div>
+                    <svg class="phone-cracks" id="phoneCracks" viewBox="0 0 300 500" preserveAspectRatio="none" aria-hidden="true">
+                        <g class="crack-stage-1"><path d="M66 0 111 92 90 151 145 194 121 263 176 311"/><path d="m111 92 56-23 42 39"/></g>
+                        <g class="crack-stage-2"><path d="M0 204 91 151 126 164 160 123 206 108 229 66"/><path d="m160 123 20 48 52 38 68-14"/><path d="m121 263-42 45 14 67 56 26"/></g>
+                        <g class="crack-stage-3"><path d="m0 357 79-49 61 24 48-21 75 37 37-21"/><path d="m206 108 5 83-31 45 41 54 40 14"/><path d="m91 151-8-92L48 25"/></g>
+                        <g class="crack-stage-4"><path d="m0 61 48-2 37 32 26 1"/><path d="m0 431 66-39 74 7 28-29"/><path d="m214 0-5 49 37 17 54-19"/><path d="m239 500-10-72 47-49"/></g>
+                        <g class="crack-stage-5"><path d="m0 0 88 100 8 71 69 67-35 77 69 59-18 126"/><path d="m300 0-68 92-26 99 40 78-36 81 49 63-20 87"/><path d="m0 285 77 23 48-45 67 28 44-22 64 25"/><path d="m27 500 43-82-9-67 52-66 16-69-37-54"/><path d="m276 156-59-4-48 54-64-18-50 47-55-1"/><path d="m64 32 76 41 17 52 61-17"/></g>
+                    </svg>
+                </div>
+                <button type="button" class="phone-home-button" id="phoneHomeButton" onclick="Phone.home()" aria-label="Return to phone home"></button>
+            </section>
+        </div>
+    </div>
+
+    <div class="screen" id="scrGambling" aria-live="polite"></div>
+
+    <div class="screen" id="scrOpenbox">
+        <div class="openbox-page" id="openboxContent" aria-live="polite"></div>
+    </div>
+
+    <div class="screen" id="scrWriterInput">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title" id="writerCategoryLabel">PARTY</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
+
+        <div class="prompt-box">
+            <div class="prompt-text" id="activePromptLabel">...</div>
+        </div>
+
+        <div class="timer-display">0:45</div>
+
+        <textarea class="card-textarea" id="writerInput" placeholder="Write your answer..." maxlength="500"></textarea>
+        <div class="char-count" id="charCount">0 / 120 words</div>
+
+        <button class="btn-main" id="lockInBtn" onclick="Buttons.submitWriterCard()">Lock In Card</button>
+        <button type="button" class="btn-secondary time-boost-button" id="useTimeBoostBtn" onclick="Buttons.useTimeBoost()" hidden></button>
+    </div>
+
+    <div class="screen" id="scrRevealStage">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title">THE REVEAL</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
+
+        <div class="prompt-box">
+            <div class="prompt-text" id="revealPromptLabel">...</div>
+        </div>
+
+        <p class="brand-subtitle" id="revealInstructions" style="text-align:center;">Tap DRAW to advance or READ to go back.</p>
+
+        <div id="cardsWrapper"></div>
+
+        <button class="btn-main" id="nextRoundBtn" style="display:none; margin-top:20px;">Next Round</button>
+        <button class="btn-secondary" id="returnLobbyBtn" style="display:none; margin-top:10px;">Return to Lobby</button>
+    </div>
+
+</div>
+
+<script src=".js%20files/vibrations.js?v=20261116-phone-controls"></script>
+<script src=".js%20files/networking.js?v=20261115-notebook-page-flow"></script>
+<script src=".js%20files/cards.js?v=20261119-independent-piles2"></script>
+<script src=".js%20files/bots.js?v=20261117-coin-openbox"></script>
+<script src=".js%20files/buttons.js?v=20261115-casino-lobby"></script>
+<script src=".js%20files/coinMode.js?v=20261118-coin-target-toast1"></script>
+<script src=".js%20files/players.js?v=20261118-classic-timers"></script>
+<script src=".js%20files/openbox.js?v=20261117-coin-openbox"></script>
+<script src=".js%20files/blackjack.js?v=20261116-shared-bots"></script>
+<script src=".js%20files/gambling.js?v=20261116-casino-unlimited"></script>
+<script src=".js%20files/phone.js?v=20261117-coin-3d-flow2"></script>
+<script src=".js%20files/game.js?v=20261119-cycle-layout1"></script>
+
+<script>
+var introNotebook=document.getElementById('introNotebook');
+if(introNotebook){
+  introNotebook.addEventListener('animationend',function(event){
+    if(event.animationName==='notebookRise')introNotebook.classList.remove('is-intro');
+  });
+}
+window.openNotebook=function(){
+  var notebook=document.getElementById('introNotebook');
+  if(!notebook||notebook.classList.contains('is-opening')||notebook.classList.contains('is-opening-pending'))return;
+  window.Vibrate&&window.Vibrate.click&&window.Vibrate.click();
+  Sound.draw();
+  var cover=notebook.querySelector('.notebook-cover-face');
+  if(cover){cover.inert=true;cover.setAttribute('aria-hidden','true');}
+  notebook.classList.remove('is-rising');
+  notebook.classList.add('is-opening-pending');
+  window.requestAnimationFrame(function(){
+    notebook.classList.remove('is-opening-pending');
+    if(!notebook.isConnected||!document.getElementById('scrMenu').classList.contains('active'))return;
+    notebook.classList.add('is-opening');
+    notebook.openTimer=window.setTimeout(function(){
+      notebook.openTimer=null;
+      if(notebook.classList.contains('is-opening'))notebook.classList.add('is-zooming');
+    },window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:620);
+  });
+};
+(function(){
+  var root=document.documentElement;
+  function paint(t){
+    root.dataset.theme=t;
+    var m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=t==='dark'?'#111d26':'#f5f7f6';
+    document.querySelectorAll('.theme-opt').forEach(function(b){b.classList.toggle('active',b.dataset.themeChoice===t);});
+  }
+  window.osSetTheme=function(t){
+    t=t==='dark'?'dark':'light';
+    var changed=root.dataset.theme!==t;
+    try{localStorage.setItem('opensight-theme',t);}catch(e){}
+    paint(t); window.Vibrate && window.Vibrate.click && window.Vibrate.click();
+    if(changed && typeof Sound !== 'undefined' && Sound.draw) Sound.draw();
+  };
+  function readSetting(key,fallback){
+    try{
+      var stored=localStorage.getItem(key);
+      if(stored===null||stored.trim()==='')return fallback;
+      var value=Number(stored);
+      return Number.isFinite(value)?Math.max(0,Math.min(100,value)):fallback;
+    }catch(e){return fallback;}
+  }
+  function saveSetting(key,value){
+    try{localStorage.setItem(key,String(value));}catch(e){}
+  }
+  var volumeSlider=document.getElementById('gameVolumeSlider');
+  var volumeValue=document.getElementById('gameVolumeValue');
+  var vibrationSlider=document.getElementById('vibrationSlider');
+  var vibrationValue=document.getElementById('vibrationValue');
+  var vibrationHint=document.getElementById('vibrationHint');
+  var savedVolume=readSetting('opensight-game-volume',100);
+  var savedVibration=readSetting('opensight-vibration-strength',100);
+  volumeSlider.value=String(savedVolume);
+  vibrationSlider.value=String(savedVibration);
+  Sound.setVolume(savedVolume/100);
+  window.Vibrations.setIntensity(savedVibration/100);
+  volumeValue.value=savedVolume+'%';
+  volumeValue.textContent=savedVolume+'%';
+  vibrationValue.value=savedVibration+'%';
+  vibrationValue.textContent=savedVibration+'%';
+  if(!window.Vibrations.isSupported()){
+    vibrationSlider.disabled=true;
+    vibrationHint.textContent='Vibration is not supported on this device.';
+  }
+  volumeSlider.addEventListener('input',function(){
+    var value=Number(volumeSlider.value);
+    Sound.setVolume(value/100);
+    volumeValue.value=value+'%';
+    volumeValue.textContent=value+'%';
+    saveSetting('opensight-game-volume',value);
+  });
+  vibrationSlider.addEventListener('input',function(){
+    var value=Number(vibrationSlider.value);
+    window.Vibrations.setIntensity(value/100);
+    window.Vibrations.preview();
+    vibrationValue.value=value+'%';
+    vibrationValue.textContent=value+'%';
+    vibrationHint.textContent=value===0?'Vibrations are off.':'Set to 0% to turn vibrations off.';
+    saveSetting('opensight-vibration-strength',value);
+  });
+  paint(root.dataset.theme||'light');
+})();
+</script>
+</body>
+</html>

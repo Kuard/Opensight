@@ -1,0 +1,189 @@
+.game-setting-toggle {
+    display: flex;
+    width: min(100%, 340px);
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 5px auto 8px;
+    padding: 6px 9px;
+    border: 2px solid var(--line);
+    border-radius: var(--hd2);
+    background: var(--card, #fbf8ee);
+    color: var(--ink);
+    box-shadow: 2px 3px 0 var(--line-soft);
+    cursor: pointer;
+}
+
+.game-setting-toggle:active {
+    transform: translate(1px, 2px);
+    box-shadow: 1px 1px 0 var(--line-soft);
+}
+
+.game-setting-toggle > span:first-child {
+    display: grid;
+    gap: 1px;
+}
+
+.game-setting-toggle strong { font-size: 13px; }
+.game-setting-toggle small { color: var(--ink-soft); font-size: 10px; }
+.game-setting-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.game-setting-switch {
+    position: relative;
+    width: 40px;
+    height: 23px;
+    flex: 0 0 40px;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: var(--ink-faint);
+    transition: background .18s ease;
+}
+
+.game-setting-switch::after {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+    content: "";
+    transition: transform .18s ease;
+}
+
+.game-setting-toggle input:checked + .game-setting-switch {
+    background: var(--neon-pink, #e2474a);
+}
+
+.game-setting-toggle input:checked + .game-setting-switch::after {
+    transform: translateX(17px);
+}
+
+.game-setting-toggle input:focus-visible + .game-setting-switch {
+    outline: 3px solid var(--mark);
+    outline-offset: 3px;
+}
+
+.game-setting-toggle input:disabled + .game-setting-switch { opacity: .6; }
+
+@media (max-width: 500px), (max-height: 650px) {
+    #scrLobby .game-setting-toggle {
+        width: min(100%, 300px);
+        min-height: 36px;
+        margin: 3px auto 5px;
+        padding: 4px 7px;
+    }
+
+    #scrLobby .game-setting-toggle strong { font-size: 12px; }
+    #scrLobby .game-setting-toggle small { font-size: 9px; }
+}
+
+.gambling-reel-column {
+    width: var(--gambling-reel-cell-size);
+    height: var(--gambling-reel-cell-size);
+    flex: 0 1 var(--gambling-reel-cell-size);
+    overflow: hidden;
+    border: 2px solid rgba(0,0,0,.14);
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(0,0,0,.04), transparent 18%, transparent 82%, rgba(0,0,0,.04));
+    box-shadow: inset 0 0 5px rgba(0,0,0,.12);
+}
+
+.gambling-reel-strip {
+    display: flex;
+    flex-direction: column;
+    transform: translateY(0);
+    will-change: transform;
+}
+
+.gambling-reel-symbol,
+.gambling-reel-result {
+    display: flex;
+    height: var(--gambling-reel-cell-size);
+    flex: 0 0 var(--gambling-reel-cell-size);
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    letter-spacing: 0;
+    text-shadow: 0 2px 0 rgba(0,0,0,.08);
+}
+
+@keyframes slotResultSettle {
+    from { transform: translateY(-10px); opacity: .65; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.gambling-skip-button {
+    display: block;
+    width: min(100%, 220px);
+    min-height: 40px;
+    margin: 12px auto 0;
+}
+
+.gambling-skip-button[hidden] { display: none; }
+.gambling-skip-button:disabled { opacity: .6; }
+
+.time-boost-button {
+    width: 100%;
+    min-height: 42px;
+    margin-top: 6px;
+    border-color: var(--neon-pink, #e2474a);
+    color: var(--neon-pink, #e2474a);
+    font-weight: 800;
+}
+
+.time-boost-button[hidden] { display: none; }
+.time-boost-button:disabled { opacity: .55; }
+
+.gambling-symbol-guide {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(0,0,0,.2);
+    color: var(--paper);
+    text-align: left;
+}
+
+.gambling-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.gambling-legend-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.gambling-legend-symbol {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    place-items: center;
+    border: 2px solid rgba(0,0,0,.22);
+    border-radius: 8px;
+    background: #fffdf7;
+    color: #b32837;
+    font-size: 20px;
+}
+
+.gambling-legend-item small {
+    display: block;
+    margin-top: 1px;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.15;
+}
+
