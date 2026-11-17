@@ -1,8 +1,8 @@
 # OpenSight
 
-OpenSight is a browser-based party game with Classic and Coin modes. It uses
-PeerJS data connections for peer-to-peer rooms and loads question pools from
-local JSON files.
+OpenSight is a browser-based party game with Classic, Coin, Casino, Blackjack,
+and Openbox modes. It uses PeerJS data connections for peer-to-peer rooms and
+loads question pools from local JSON files.
 
 Player text supports Unicode and emoji. The UI uses emoji sparingly and includes
 system emoji font fallbacks for cards and other player-provided text. Browser
@@ -26,16 +26,24 @@ the browser.
 - `blackjack.js` owns the host-authoritative lobby Blackjack side game; private
   hands go only to their owners until the hand ends.
 - `blackjack.css` owns the dedicated Blackjack screen and table layout.
-- `game.js` owns Classic Mode state, rounds, scoring, and game-level messages.
-- `gambling.js` owns the host-authoritative Classic Mode slot rewards, lobby
-  toggle synchronization, and local spin animation.
+- `game.js` owns Classic Mode state, rounds, scoring, game-level messages, and
+  notebook page turns that reveal the lobby and gameplay screens.
+- `gambling.js` owns Classic Mode slot rewards, lobby toggle synchronization,
+  and the repeatable Casino phone slot machine.
 - `gambling.css` owns the slot-machine lobby toggle and gambling screen styling.
 - `coinMode.js` owns Coin Mode state, questions, and phase transitions.
-- `cards.js` and `fidget.js` own their respective interactions.
+- `openbox.js` owns Openbox round state, host-authoritative submissions and
+  voting, scoring, and phase transitions; `openbox_questions.json` contains its
+  Open Answer prompts and True/False statements.
+- `cards.js` owns card and voting interactions.
 - `buttons.js` owns shared button actions; `vibrations.js` owns haptic feedback,
   including safe delegated feedback for buttons and lobby controls.
-- `theme.css` contains shared design tokens; the other CSS files own the page or
-  component styles named by their responsibility.
+- `phone.js` and `phone.css` own the simulated phone and its quick-setting
+  controls; the controls never affect game or device settings. `phone.css` also
+  styles the notebook cover and shared notebook-paper page surfaces.
+- `theme.css` contains shared design tokens; `design-system.css` applies the
+  common visual language, control styling, contrast, and notebook motion on top
+  of the page- and component-specific styles.
 - `questions.json` and `target_questions.json` are the Classic and Coin Mode
   question pools.
 
@@ -53,6 +61,26 @@ main game's score. The test bot is Blackjack-only and is not added to the main
 game roster.
 The game's regular test bots automatically spin, use any bonus spin, and only
 begin writing after their spin sequence resolves.
+
+Openbox supports Open Answer and True/False rounds. Open Answer prompts may use
+one subject or a pair; the host never chooses the subjects. The game randomly
+selects from the least-used players, with pair counts used to avoid repeatedly
+choosing the same duo. True/False rounds use one subject, who writes a question
+or statement and marks its true answer. Other players predict independently.
+Correct predictions earn 1 point; a True/False subject earns 1 point for each
+player fooled. In Open Answer, writers earn 1 point per distinct player who
+chooses their answer. Reveals show answer authors and player votes, and scores
+carry across rounds. Hosts choose the category, Openbox round type, and
+answer/vote timers. Openbox uses the shared lobby round-limit presets. Open
+Answer prompt pools are stored in `openbox_questions.json`; no external AI
+service is used.
+
+Open Answer question-bank entries can be plain strings for one subject. To
+author a two-subject prompt, use an object such as
+`{"text":"How would {subject} react if {other} asked them out?","subjectCount":2}`.
+The game displays a personalized version for each subject and automatically
+assigns the pair. True/False rounds do not use the question bank; the subject
+writes a new question or statement each round.
 
 In Classic Mode, a writer sees submitted cards only after submitting their own;
 the host starts anonymous community voting when writing ends. The subject
@@ -79,7 +107,11 @@ all points the player earns in that round. A blue dot marks your community vote
 only on your own screen; other players' votes remain private. Community voting
 still uses a long press on the centered card. A +15-second boost is banked up
 to one charge, persists across rounds, and can be activated manually at any
-time before submitting a card. Coin Mode uses the same balanced subject
-selection, has no gambling, and ends without a points or winner board. Browser
-vibration is optional and may be unavailable due to device or browser
-restrictions.
+time before submitting a card. The separate Casino-mode phone slot can be spun
+repeatedly while the room is in its lobby. Coin Mode uses balanced subject
+selection. The subject chooses Heads or Tails privately before picking a target;
+choosing a target starts the coin flip automatically on every phone, with a
+phone notification naming the chosen player. A matching side protects the
+prompt, while the other side reveals it. Coin Mode has no gambling and ends
+without a points or winner board. Browser vibration is optional and may be
+unavailable due to device or browser restrictions.

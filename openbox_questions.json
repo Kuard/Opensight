@@ -1,0 +1,110 @@
+{
+  "openAnswer": {
+    "classic": [
+      "What harmless thing do you take far too seriously?",
+      "What is the most oddly specific thing that instantly improves your day?",
+      "What small thing were you convinced was true as a kid?",
+      "What would you be unexpectedly good at on a game show?",
+      "What questionable snack combination do you genuinely enjoy?",
+      "What item would you bring to survive one night in a shopping mall?",
+      "What is the silliest reason you have ever been late?",
+      "What would the title of your very ordinary autobiography be?",
+      "What tiny inconvenience can ruin your whole morning?",
+      "What would you name a boat you absolutely do not own?"
+    ],
+    "spicy": [
+      "What is your most ridiculous attempt at flirting?",
+      "What is the boldest message you have almost sent but did not?",
+      "What is a surprisingly effective way to win you over?",
+      "What is the most awkward place you have realized you had a crush?",
+      "What is your funniest first-date dealbreaker?",
+      "What is the most dramatic thing you have done to get someone's attention?",
+      "What compliment would make you blush immediately?",
+      "What is a harmless romantic gesture you secretly love?",
+      "What is the most chaotic excuse you have used to leave a date?",
+      "What song would make you make an unexpectedly dramatic entrance?"
+    ],
+    "deep": [
+      "What small decision changed your direction more than you expected?",
+      "What is something you understand about yourself better now than a year ago?",
+      "What kind of support is hardest for you to ask for?",
+      "What ordinary moment do you hope you remember years from now?",
+      "What is a belief you have changed your mind about?",
+      "What quality do you appreciate more in friends as you get older?",
+      "What is a goal you would pursue if you could ignore other people's expectations?",
+      "What is one thing you wish people noticed about your effort?",
+      "What does a genuinely restful day look like to you?",
+      "What advice would you give your younger self about friendship?"
+    ],
+    "nsfw": [
+      "What is the most awkward thing you have said while trying to flirt in bed?",
+      "What is the funniest attempt you have made to look sexy?",
+      "What is your ideal grown-up date night, from start to finish?",
+      "What flirty line would make you laugh instead of swoon?",
+      "What is the most unexpected place you have had a crush?",
+      "What is a romantic movie moment you would secretly enjoy in real life?",
+      "What is your most memorable dating-app mishap?",
+      "What is the boldest consensual thing you would admit to wanting?",
+      "What is the most absurdly specific thing that would kill the mood for you?",
+      "Which bedroom habit would make you laugh in the middle of a serious moment?",
+      {
+        "text": "How would {subject} react if {other} asked for consent before offering to jerk them off?",
+        "subjectCount": 2
+      }
+    ]
+  },
+  "trueFalse": {
+    "classic": [
+      "{subject} has given a pet or houseplant a full conversation.",
+      "{subject} has eaten dessert before dinner and called it a plan.",
+      "{subject} has practiced a conversation before making a phone call.",
+      "{subject} has kept a box because it seemed too useful to throw away.",
+      "{subject} has laughed at a joke they did not understand.",
+      "{subject} has waved back at someone who was waving at somebody else.",
+      "{subject} has named a household object.",
+      "{subject} has watched the same favorite movie more than five times.",
+      "{subject} has taken a photo of food and then forgotten to eat it.",
+      "{subject} has made up lyrics when they did not know the real ones."
+    ],
+    "spicy": [
+      "{subject} has had a crush on someone they first met as a friend.",
+      "{subject} has drafted a flirty message, deleted it, and tried again.",
+      "{subject} has gone on a date mainly because the food sounded good.",
+      "{subject} has pretended to be calmer than they felt around a crush.",
+      "{subject} has replayed a compliment in their head for an entire day.",
+      "{subject} has changed outfits more than twice before a date.",
+      "{subject} has asked a friend to help interpret a short text message.",
+      "{subject} has made the first move and surprised themself.",
+      "{subject} has had a crush on a fictional character.",
+      "{subject} has used a deliberately silly excuse to keep talking to someone."
+    ],
+    "deep": [
+      "{subject} has changed a long-held opinion after listening to someone.",
+      "{subject} has changed a goal because it no longer felt like their own.",
+      "{subject} has apologized first even when it felt difficult.",
+      "{subject} has found confidence by learning to say no.",
+      "{subject} has reconnected with someone after a long silence.",
+      "{subject} has felt proud of a choice nobody else noticed.",
+      "{subject} has learned an important lesson from a mistake.",
+      "{subject} has asked for help sooner than they used to.",
+      "{subject} has kept a promise to themself for a full year.",
+      "{subject} has discovered a new interest through a friend."
+    ],
+    "nsfw": [
+      "{subject} has had a crush on someone they met through an app.",
+      "{subject} has gone on a date that lasted longer than planned.",
+      "{subject} has sent a risky message and immediately put their phone in another room.",
+      "{subject} has dressed up for a date and then felt overdressed.",
+      "{subject} has laughed in the middle of a moment they were trying to make sexy.",
+      "{subject} has had a romantic plan interrupted by something silly.",
+      "{subject} has a hard boundary they wish more dates would ask about.",
+      "{subject} has had a crush on a coworker or classmate and kept it private.",
+      "{subject} has chosen a date location because it had a great dessert menu.",
+      "{subject} has mistaken friendly attention for flirting.",
+      {
+        "text": "{subject} would say yes if {other} asked them for a consensual handjob.",
+        "subjectCount": 2
+      }
+    ]
+  }
+}
