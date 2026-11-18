@@ -160,6 +160,37 @@ function selectFairSubject(players, counts, previousSubject) {
     return subject;
 }
 
+// ── MULTI-SUBJECT PROMPTS (classic mode) ─────────────────────────────────────
+// [Subject]  = the MAIN subject: holds the phone, sees the prompt, does NOT write.
+// [Subject2] / [Subject3] = extra named players (3 names max in one prompt).
+// They only make the prompt more questionable - they still write cards like
+// every other writer. A prompt that needs N names needs at least N players.
+function getPromptSubjectSlots(rawQuestion) {
+    let slots = 1;
+    const pattern = /\[Subject([23])\]/g;
+    let match;
+    while ((match = pattern.exec(String(rawQuestion))) !== null) {
+        slots = Math.max(slots, Number(match[1]));
+    }
+    return slots;
+}
+
+function pickExtraSubjects(players, mainSubject, count) {
+    const pool = [...new Set((players || []).filter(player =>
+        typeof player === 'string' && player && player !== mainSubject))];
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.slice(0, Math.max(0, count));
+}
+
+function buildSubjectPrompt(rawQuestion, mainSubject, extraSubjects) {
+    return String(rawQuestion)
+        .replace(/\[Subject([23])\]/g, (token, n) => (extraSubjects || [])[Number(n) - 2] || mainSubject)
+        .replace(/\[Subject\]/g, mainSubject);
+}
+
 // ── MOBILE ADDRESS BAR HIDING ────────────────────────────────────────────────
 window.addEventListener('load', () => {
     window.scrollTo(0, 1);
@@ -1742,19 +1773,29 @@ function broadcastStartRound() {
     }
     
     const pool = QUESTIONS[room.currentCategory] || QUESTIONS.spicy;
-    const unusedQuestions = pool.filter(q => !room.playedQuestions.includes(q));
-    
+    const eligiblePool = pool.filter(q => getPromptSubjectSlots(q) <= room.players.length);
+    let unusedQuestions = eligiblePool.filter(q => !room.playedQuestions.includes(q));
+
     if (unusedQuestions.length === 0) {
-        broadcastToAll({ type: 'GAME_OVER', scores: room.scores, lateJoiners: room.lateJoiners });
-        return;
+        if (eligiblePool.length === 0) {
+            broadcastToAll({ type: 'GAME_OVER', scores: room.scores, lateJoiners: room.lateJoiners });
+            return;
+        }
+        // Every prompt has been played: reshuffle the deck so the game never runs dry.
+        // The last prompt stays "played" so it can't repeat back-to-back.
+        const lastQuestion = room.playedQuestions[room.playedQuestions.length - 1];
+        room.playedQuestions = lastQuestion ? [lastQuestion] : [];
+        unusedQuestions = eligiblePool.filter(q => !room.playedQuestions.includes(q));
+        if (unusedQuestions.length === 0) unusedQuestions = eligiblePool.slice();
     }
-    
+
     room.subjectCounts = room.subjectCounts || {};
     const subject = selectFairSubject(room.players, room.subjectCounts, room.currentSubject);
     if (!subject) return;
 
     const raw      = unusedQuestions[Math.floor(Math.random() * unusedQuestions.length)];
-    const prompt   = raw.replace(/\[Subject\]/g, subject);
+    const extraSubjects = pickExtraSubjects(room.players, subject, getPromptSubjectSlots(raw) - 1);
+    const prompt   = buildSubjectPrompt(raw, subject, extraSubjects);
 
     room.roundCount++;
     room.activeWriters = room.players.filter(p => p !== subject && !p.startsWith('bot_late'));
@@ -1766,6 +1807,7 @@ function broadcastStartRound() {
     broadcastToAll({
         type: 'START_ROUND',
         subject,
+        extraSubjects,
         prompt,
         category: room.currentCategory,
         rawQuestion: raw,
@@ -1962,7 +2004,7 @@ function renderRevealStage() {
     $('revealPromptLabel').innerText = room.currentPrompt;
     
     const pool = QUESTIONS[room.currentCategory] || QUESTIONS.spicy;
-    const outOfPrompts = pool.every(q => room.playedQuestions.includes(q));
+    const outOfPrompts = pool.length === 0; // prompts are recycled, so only an empty deck ends the game
     const roundLimitReached = (room.maxRounds !== 'unlimited') && (room.roundCount >= room.maxRounds);
     const isMeSubject = (net.myName === room.currentSubject);
     const isHost = (net.role === 'host');

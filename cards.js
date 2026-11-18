@@ -521,7 +521,9 @@ const CardSystem = {
 
             el.className = `reveal-card-scene ${position}`;
             el.style.zIndex = isActive ? '30' : position === 'pos-hidden' ? '0' : String(12 - depth);
-            el.style.opacity = position === 'pos-hidden' ? '0' : '1';
+            // Parked cards fade out as they reach a pile: the DRAW/READ buttons
+            // already draw the piles, so showing both made two stacks overlap.
+            el.style.opacity = position === 'pos-center' ? '1' : '0';
             el.style.visibility = position === 'pos-hidden' ? 'hidden' : 'visible';
             el.style.pointerEvents = position === 'pos-center' && !this.isAnimating ? 'auto' : 'none';
             el.style.setProperty('--stack-x', `${depth * (position === 'pos-draw-pile' ? 4 : -4)}px`);

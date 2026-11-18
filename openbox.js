@@ -997,6 +997,15 @@
             appendText(container, 'p', 'openbox-skip-reason', renderModel.skipReason);
         } else if (renderModel.type === 'openAnswer') {
             const votesByPlayer = renderModel.votesByPlayer || {};
+            const authorBonusVoters = {};
+            Object.entries(votesByPlayer).forEach(([voter, votes]) => {
+                renderModel.subjects.forEach(subject => {
+                    const picked = renderModel.answerOptions.find(option => option.id === votes[subject]);
+                    if (!picked || picked.author === voter) return;
+                    if (!authorBonusVoters[picked.author]) authorBonusVoters[picked.author] = new Set();
+                    authorBonusVoters[picked.author].add(voter);
+                });
+            });
             renderModel.subjects.forEach(subject => {
                 const subjectSection = appendText(container, 'section', 'openbox-reveal-subject', '');
                 appendQuestionPrompts(subjectSection, renderModel.question, renderModel.subjects, subject);
@@ -1009,10 +1018,12 @@
                     appendText(item, 'span', 'openbox-answer-number', String(index + 1));
                     const details = appendText(item, 'div', 'openbox-answer-details', '');
                     appendText(details, 'p', 'openbox-answer-text', answer.text);
-                    appendText(details, 'span', 'openbox-answer-author', `Written by ${answer.author}`);
+                    const authorBonus = authorBonusVoters[answer.author] ? authorBonusVoters[answer.author].size : 0;
+                    appendText(details, 'span', 'openbox-answer-author',
+                        `Written by ${answer.author}${authorBonus ? ` (+${authorBonus})` : ''}`);
                     const voters = Object.entries(votesByPlayer)
                         .filter(([, votes]) => votes[subject] === answer.id)
-                        .map(([voter]) => voter);
+                        .map(([voter]) => `${voter}${isCorrect ? ` (+${Engine.POINTS_PER_CORRECT_VOTE})` : ''}`);
                     appendText(details, 'span', 'openbox-vote-attribution',
                         `Voted by: ${voters.join(', ') || 'No one'}`);
                     if (isCorrect) {
@@ -1031,31 +1042,20 @@
                     truth ? 'TRUE' : 'FALSE');
                 appendText(result, 'p', 'openbox-question openbox-revealed-statement',
                     renderModel.statementsBySubject && renderModel.statementsBySubject[subject] || '');
+                const pointsLabel = correct => correct ? ` (+${Engine.POINTS_PER_CORRECT_VOTE})` : '';
                 const trueVoters = Object.entries(votesByPlayer)
                     .filter(([, votes]) => votes[subject] === true)
-                    .map(([voter]) => voter);
+                    .map(([voter]) => `${voter}${pointsLabel(truth === true)}`);
                 const falseVoters = Object.entries(votesByPlayer)
                     .filter(([, votes]) => votes[subject] === false)
-                    .map(([voter]) => voter);
+                    .map(([voter]) => `${voter}${pointsLabel(truth === false)}`);
                 appendText(result, 'p', 'openbox-vote-attribution',
                     `TRUE votes: ${trueVoters.join(', ') || 'No one'}`);
                 appendText(result, 'p', 'openbox-vote-attribution',
                     `FALSE votes: ${falseVoters.join(', ') || 'No one'}`);
                 const fooledVoters = truth ? falseVoters : trueVoters;
                 appendText(result, 'p', 'openbox-fooled-voters',
-                    `Fooled ${fooledVoters.length}: ${fooledVoters.join(', ') || 'No one'}`);
-            });
-        }
-        const scores = Object.entries(renderModel.scores || {}).sort((left, right) => right[1] - left[1]);
-        if (scores.length) {
-            const list = appendText(container, 'div', 'openbox-score-list', '');
-            appendText(list, 'h2', 'openbox-vote-title', 'SCOREBOARD');
-            scores.slice(0, 8).forEach(([name, score], index) => {
-                const row = appendText(list, 'div', 'openbox-score-row', '');
-                appendText(row, 'span', 'openbox-score-rank', `${index + 1}`);
-                appendText(row, 'span', 'openbox-score-name', name);
-                const earned = Number(renderModel.roundPoints[name]) || 0;
-                appendText(row, 'strong', 'openbox-score-value', `${score}${earned ? ` (+${earned})` : ''}`);
+                    `Fooled ${fooledVoters.length}: ${fooledVoters.join(', ') || 'No one'}${fooledVoters.length ? ` · ${subject} (+${fooledVoters.length * Engine.POINTS_PER_CORRECT_VOTE})` : ''}`);
             });
         }
         if (net.role === 'host') {

@@ -240,6 +240,136 @@ select:focus-visible {
     color: var(--ink);
 }
 
+#scrLobby .lobby-custom-select {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+#scrLobby .lobby-custom-select.is-open {
+    z-index: 20;
+}
+
+/* The native <select> stays in the DOM as the value store for LobbyDropdowns
+   (players.js) but is hidden; the trigger + menu below replace it. */
+#scrLobby .lobby-dropdown-field .lobby-custom-select > select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    clip: rect(0 0 0 0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#scrLobby .lobby-select-trigger {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 11px;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    background: var(--field);
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#scrLobby .lobby-select-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#scrLobby .lobby-select-chevron {
+    width: 9px;
+    height: 9px;
+    flex: 0 0 auto;
+    transform: translateY(-2px) rotate(45deg);
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transition: transform .16s ease;
+}
+
+#scrLobby .lobby-custom-select.is-open .lobby-select-chevron {
+    transform: translateY(2px) rotate(225deg);
+}
+
+#scrLobby .lobby-select-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    z-index: 30;
+    max-height: 52vh;
+    max-height: min(344px, 52dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 8px 24px var(--shadow);
+}
+
+#scrLobby .lobby-select-menu[hidden] {
+    display: none;
+}
+
+#scrLobby .lobby-select-option {
+    display: block;
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+#scrLobby .lobby-select-option[aria-selected="true"] {
+    background: color-mix(in srgb, var(--ink) 12%, var(--card));
+    color: var(--ink);
+}
+
+@media (hover: hover) {
+    #scrLobby .lobby-select-option:hover {
+        background: color-mix(in srgb, var(--ink) 8%, var(--card));
+    }
+
+    #scrLobby .lobby-select-option[aria-selected="true"]:hover {
+        background: color-mix(in srgb, var(--ink) 12%, var(--card));
+    }
+}
+
+#scrLobby .lobby-select-option:focus-visible,
+#scrLobby .lobby-select-trigger:focus-visible {
+    outline: 3px solid var(--mark);
+    outline-offset: 2px;
+}
+
+#scrLobby .lobby-select-option:active {
+    background: color-mix(in srgb, var(--ink) 16%, var(--card));
+}
+
 .lobby-dropdown-label,
 .lobby-dropdown-label label,
 .lobby-option-description {

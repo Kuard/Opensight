@@ -499,6 +499,43 @@
 }
 
 @media (max-width: 500px), (max-height: 650px) {
+    .openbox-page {
+        gap: 6px;
+    }
+
+    .openbox-reveal-subject,
+    .openbox-truth-reveal {
+        gap: 4px;
+    }
+
+    .openbox-reveal-list {
+        gap: 3px;
+    }
+
+    .openbox-reveal-answer,
+    .openbox-truth-result {
+        gap: 6px;
+        padding: 5px 6px;
+    }
+
+    .openbox-answer-number {
+        width: 19px;
+        height: 19px;
+        font-size: 9px;
+    }
+
+    .openbox-answer-text {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+
+    .openbox-answer-author,
+    .openbox-vote-attribution,
+    .openbox-fooled-voters {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+
     .openbox-lobby-controls {
         gap: 1px;
         margin-top: 1px;

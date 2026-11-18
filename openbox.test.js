@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const test = require('node:test');
-const Openbox = require(path.join(__dirname, '..', '.js files', 'openbox.js'));
+const Openbox = require(path.join(__dirname, '..', 'openbox.js'));
 const { Engine } = Openbox;
 
 function openAnswerRound(subjectCount, players, subjects) {

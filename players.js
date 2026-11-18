@@ -63,6 +63,119 @@ function getLobbyDescriptions(mode, category) {
     };
 }
 
+const LobbyDropdowns = (() => {
+    function close(wrapper, restoreFocus) {
+        const trigger = wrapper.querySelector('.lobby-select-trigger');
+        const menu = wrapper.querySelector('.lobby-select-menu');
+        menu.hidden = true;
+        wrapper.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+        if (restoreFocus) trigger.focus();
+    }
+
+    function closeOthers(except) {
+        document.querySelectorAll('.lobby-custom-select.is-open').forEach(wrapper => {
+            if (wrapper !== except) close(wrapper, false);
+        });
+    }
+
+    function refresh(select) {
+        const wrapper = select.closest('.lobby-custom-select');
+        if (!wrapper) return;
+        const trigger = wrapper.querySelector('.lobby-select-trigger');
+        const value = wrapper.querySelector('.lobby-select-value');
+        const menu = wrapper.querySelector('.lobby-select-menu');
+        const selected = Array.from(select.options).find(option => option.value === select.value);
+        value.textContent = selected ? selected.textContent : '';
+        menu.replaceChildren();
+        Array.from(select.options).forEach(option => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'lobby-select-option';
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', String(option === selected));
+            item.tabIndex = -1;
+            item.textContent = option.textContent;
+            item.addEventListener('click', () => {
+                select.value = option.value;
+                refresh(select);
+                close(wrapper, true);
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            menu.appendChild(item);
+        });
+        trigger.disabled = select.disabled;
+    }
+
+    function open(wrapper, focusSelected) {
+        closeOthers(wrapper);
+        const select = wrapper.querySelector('select');
+        const trigger = wrapper.querySelector('.lobby-select-trigger');
+        const menu = wrapper.querySelector('.lobby-select-menu');
+        refresh(select);
+        menu.hidden = false;
+        wrapper.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+        if (focusSelected) {
+            const selected = menu.querySelector('[aria-selected="true"]');
+            (selected || menu.querySelector('[role="option"]'))?.focus();
+        }
+    }
+
+    function initialize() {
+        document.querySelectorAll('.lobby-custom-select').forEach(wrapper => {
+            const trigger = wrapper.querySelector('.lobby-select-trigger');
+            const menu = wrapper.querySelector('.lobby-select-menu');
+            trigger.addEventListener('click', () => {
+                if (menu.hidden) open(wrapper, false);
+                else close(wrapper, false);
+            });
+            trigger.addEventListener('keydown', event => {
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    open(wrapper, true);
+                } else if (event.key === 'Escape' && !menu.hidden) {
+                    event.preventDefault();
+                    close(wrapper, false);
+                } else if (event.key === 'Tab' && !menu.hidden) {
+                    close(wrapper, false);
+                }
+            });
+            menu.addEventListener('keydown', event => {
+                const options = Array.from(menu.querySelectorAll('[role="option"]'));
+                const index = options.indexOf(document.activeElement);
+                let nextIndex = index;
+                if (event.key === 'ArrowDown') nextIndex = (index + 1 + options.length) % options.length;
+                else if (event.key === 'ArrowUp') nextIndex = (index - 1 + options.length) % options.length;
+                else if (event.key === 'Home') nextIndex = 0;
+                else if (event.key === 'End') nextIndex = options.length - 1;
+                else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    close(wrapper, true);
+                    return;
+                } else if (event.key === 'Tab') {
+                    close(wrapper, false);
+                    return;
+                } else {
+                    return;
+                }
+                event.preventDefault();
+                if (options[nextIndex]) options[nextIndex].focus();
+            });
+            refresh(wrapper.querySelector('select'));
+        });
+        document.addEventListener('click', event => {
+            document.querySelectorAll('.lobby-custom-select.is-open').forEach(wrapper => {
+                if (!wrapper.contains(event.target)) close(wrapper, false);
+            });
+        });
+    }
+
+    return { initialize, refresh };
+})();
+
+LobbyDropdowns.initialize();
+
 // ── LOCAL PLAYER IDENTITY ────────────────────────────────────────────────────
 function getCleanName() {
     let n = $('menuNameInput').value.trim();
@@ -129,7 +242,10 @@ function refreshLobbySettingsControls() {
     const categorySelect = $('lobbyCategorySelect');
     const writeTime = $('classicWriteSeconds');
     const voteTime = $('classicVoteSeconds');
-    if (modeSelect) modeSelect.value = room.gameMode || 'classic';
+    if (modeSelect) {
+        modeSelect.value = room.gameMode || 'classic';
+        LobbyDropdowns.refresh(modeSelect);
+    }
     if (writeTime) writeTime.value = String(room.timeLimit);
     if (voteTime) voteTime.value = String(room.voteTimeLimit);
     if (typeof updateClassicTimerPreview === 'function') updateClassicTimerPreview();
@@ -156,6 +272,7 @@ function refreshLobbySettingsControls() {
             categorySelect.appendChild(option);
         });
         categorySelect.value = options.some(([value]) => value === selected) ? selected : options[0][0];
+        LobbyDropdowns.refresh(categorySelect);
     }
     if (typeof Openbox !== 'undefined') Openbox.refreshLobbyControls();
 }

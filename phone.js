@@ -1,809 +1,734 @@
-const Phone = {
-    homePresses: 0,
-    crackPresses: 0,
-    available: true,
-    subjectActive: false,
-    eventTimer: null,
-    notificationTimer: null,
-    shutdownTimer: null,
-    controlView: null,
-    infoView: null,
-    settingsView: null,
-    coinView: null,
-    slotView: null,
-    stage: null,
-    activeApp: null,
-    slotMode: null,
-    profileColor: null,
-    returnApp: null,
-    homeReturnApp: null,
-    coinPhase: 'target',
-    infoContext: null,
-    selectedSuggestion: '',
-    infoHistory: [],
-    doNotDisturb: false,
-    airplaneMode: false,
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script>try{var _t=localStorage.getItem("opensight-theme");document.documentElement.dataset.theme=_t==="dark"?"dark":"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
+    <meta name="theme-color" content="#f5f7f6">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>OpenSight - Party Game Engine</title>
+    
+    <link rel="manifest" href="manifest.json?v=20261006-icons3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OpenSight">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon_small.png?v=20261006-icons3">
+    <link rel="apple-touch-icon" href="icons/icon_large.png?v=20261006-icons3">
 
-    init() {
-        this.stage = document.getElementById('subjectPhoneStage');
-        this.controlView = document.getElementById('phoneControlView');
-        this.infoView = document.getElementById('phoneInfoView');
-        this.settingsView = document.getElementById('phoneSettingsView');
-        this.coinView = document.getElementById('phoneCoinView');
-        this.slotView = document.getElementById('phoneSlotView');
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Permanent+Marker&family=Caveat+Brush&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <link rel="stylesheet" href="theme.css?v=20261117-design-tokens2">
+    <link rel="stylesheet" href="style.css?v=20261118-visual-textures1">
+    <link rel="stylesheet" href="buttons.css?v=20261006-ui6">
+    <link rel="stylesheet" href="cards.css?v=20261119-cover-flip4">
+    <link rel="stylesheet" href="coinmode.css?v=20261117-coin-3d-flow2">
+    <link rel="stylesheet" href="blackjack.css?v=20261110-larger-menu">
+    <link rel="stylesheet" href="gambling.css?v=20261115-phone-slot-final3">
+    <link rel="stylesheet" href="phone.css?v=20261118-ui-polish4">
+    <link rel="stylesheet" href="openbox.css?v=20261118-ui-polish2">
+    <link rel="stylesheet" href="design-system.css?v=20261119-lobby-dropdown1">
+</head>
 
-        const app = document.querySelector('.app-container');
-        if (app && this.stage && this.stage.parentElement !== app) {
-            this.stage.classList.add('shared-phone-stage');
-            app.appendChild(this.stage);
-        }
-        this.mountCoinPanels();
+<body class="cover-scene">
 
-        document.querySelectorAll('[data-phone-control]').forEach(button => {
-            button.addEventListener('click', () => this.pressControl(button));
-        });
+<div class="app-container cover-scene">
 
-        [['phoneBrightness', 'brightness'], ['phoneVolume', 'volume']].forEach(([id, name]) => {
-            const slider = document.getElementById(id);
-            if (slider) {
-                slider.addEventListener('input', () => this.adjustSlider(slider, name));
-                if (name === 'brightness') this.applyBrightness(Number(slider.value) / 100);
-            }
-        });
+<button type="button" class="circle-btn phone-launcher-btn" id="phoneLauncherBtn" onclick="Phone.openForLobby()" title="Open phone" aria-label="Open your phone" style="display:none;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4"></path></svg>
+</button>
 
-        this.renderCracks();
-        this.updateClock();
-        window.setInterval(() => this.updateClock(), 30000);
-    },
+<div class="modal-overlay" id="confirmLeaveModal">
+    <div class="modal-card">
+        <div class="modal-title">Leave room?</div>
+        <div class="modal-desc">Your current game session will end for this device.</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissLeaveConfirmation()">Stay</button>
+            <button class="btn-main" onclick="confirmLeaveRoom()">Leave</button>
+        </div>
+    </div>
+</div>
 
-    mountCoinPanels() {
-        const mounts = [
-            {
-                id: 'phoneCoinTargetPanel',
-                source: 'scrCoinPhase1',
-                selectors: ['.lobby-header', '#coinSubjectSelectionBox', '#coinNonSubjectWaitingBox']
-            },
-            {
-                id: 'phoneCoinSidePanel',
-                source: 'scrCoinPhase2',
-                selectors: ['.brand-header', '#coinMatrixSubjectControls', '#coinMatrixWaitNotice']
-            },
-            {
-                id: 'phoneCoinFlipPanel',
-                source: 'scrCoinStage',
-                selectors: [
-                    '.lobby-header', '#coinTapInstruction', '.coin-stage',
-                    '#coinOutcomeBanner', '#coinRevealedQuestionCard', '#coinNextRoundBtn'
-                ]
-            }
-        ];
-        mounts.forEach(({ id, source, selectors }) => {
-            const target = document.getElementById(id);
-            const screen = document.getElementById(source);
-            if (!target || !screen) return;
-            selectors.forEach(selector => {
-                const element = screen.querySelector(selector);
-                if (element) target.appendChild(element);
-            });
-        });
-    },
+<div class="modal-overlay" id="confirmNSFWModal">
+    <div class="modal-card">
+        <div class="modal-title">18+ deck</div>
+        <div class="modal-desc">This deck contains adult prompts. Continue?</div>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="dismissNSFWConfirmation()">Cancel</button>
+            <button class="btn-main" onclick="acceptNSFWConfirmation()">Continue</button>
+        </div>
+    </div>
+</div>
 
-    updateClock() {
-        const clock = document.getElementById('phoneClock');
-        if (!clock) return;
-        const now = new Date();
-        clock.textContent = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-    },
+<div class="modal-overlay" id="blackjackRulesModal" onclick="if(event.target===this)Blackjack.closeRules()">
+    <div class="modal-card">
+        <div class="modal-title">Blackjack Rules</div>
+        <div class="modal-desc blackjack-rules-copy">
+            <p>This is a quick player-versus-player version. There is no dealer: everyone draws from one shuffled 52-card deck and competes for the best hand.</p>
+            <p>Anyone in the lobby can enter and join the table. The first player seated is the table lead and can deal each hand; only the lobby host can add the test bot.</p>
+            <ul>
+                <li>Everyone starts with two cards.</li>
+                <li>2–10 are worth their number; J, Q and K are worth 10.</li>
+                <li>An Ace counts as 11 when that keeps you at 21 or below; otherwise it counts as 1.</li>
+                <li>Choose <strong>Hit</strong> to draw one card or <strong>Stand</strong> to keep your total. At 21 you stand automatically.</li>
+                <li>Going over 21 is a bust and cannot win.</li>
+                <li>The closest total to 21 wins. A two-card 21 (Ace plus a 10-value card) beats any other 21. Tied best hands share the win; if everyone busts, nobody wins.</li>
+            </ul>
+            <p>Other players' cards stay hidden until the hand ends. The table lead can end a hand early. This quick-play version has no splits, doubles, insurance, or house dealer.</p>
+        </div>
+        <button type="button" class="btn-main" onclick="Blackjack.closeRules()">Got it</button>
+    </div>
+</div>
 
-    setView(view) {
-        const views = {
-            controls: this.controlView,
-            info: this.infoView,
-            settings: this.settingsView,
-            coin: this.coinView,
-            slots: this.slotView
-        };
-        Object.entries(views).forEach(([name, element]) => {
-            if (element) element.hidden = name !== view;
-        });
-    },
+<div class="modal-overlay" id="coinEasterEggModal">
+    <div class="modal-card" style="border-color: #ffd700; box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);">
+        <div class="modal-title" style="color: #ffd700;"> MATRIX OVERRIDE </div>
+        <div class="modal-desc">The coin landed on its edge! Choose who becomes the next Subject.</div>
+        <div id="coinEasterEggPlayerGrid" style="display:flex; flex-wrap:wrap; justify-content:center; margin-top:15px;"></div>
+    </div>
+</div>
 
-    openForSubject() {
-        this.subjectActive = true;
-        this.activeApp = 'controls';
-        this.slotMode = null;
-        this.homeReturnApp = null;
-        this.stage.classList.remove('can-wake');
-        if (!this.available) {
-            this.available = true;
-            document.getElementById('phoneShutdown').hidden = true;
-        }
-        this.open();
-        this.setView('controls');
-        this.startEvents();
-    },
+<div class="screen" id="scrCoinPhase1">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">COIN MODE</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
 
-    openForLobby() {
-        if (!this.available) return;
-        this.activeApp = 'controls';
-        this.returnApp = null;
-        this.homeReturnApp = null;
-        this.slotMode = null;
-        this.updateReturnToGame();
-        this.open();
-    },
+    <div id="coinSubjectSelectionBox" style="display:none; width:100%;">
+            <div class="brand-subtitle" style="text-align:center;">Pick a target player. The coin flips immediately.</div>
+        <div class="prompt-box" style="margin: 12px 0;"><div class="prompt-text" id="coinPromptDisplay">...</div></div>
+        <div class="section-title">Select Target Player</div>
+        <div id="coinTargetPlayerGrid" class="deck-grid" style="grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px;"></div>
+    </div>
 
-    open() {
-        if (!this.available || !this.stage) return;
-        if (!this.activeApp) this.activeApp = 'controls';
-        const device = document.getElementById('phoneDevice');
-        const shouldAnimate = !device.classList.contains('is-open');
-        this.stage.classList.remove('can-wake');
-        this.stage.classList.add('is-phone-open');
-        this.renderCracks();
-        if (shouldAnimate) {
-            device.classList.remove('is-open');
-            void device.offsetWidth;
-        }
-        device.classList.add('is-open');
-        device.setAttribute('aria-hidden', 'false');
-        this.setView(this.activeApp);
-    },
+    <div id="coinNonSubjectWaitingBox" style="display:none; width:100%;">
+        <div class="brand-subtitle" style="text-align:center;"><span id="coinWaitSubjectName">Subject</span> is picking a target...</div>
+        <div class="sub-track" id="coinWaitTargetLabel" style="text-align:center; color: var(--neon-pink, #ff0055); margin: 10px 0; font-weight:700;">Waiting...</div>
+        
+    </div>
 
-    wakeOrDismiss() {
-        if (this.homePresses >= 100 &&
-            this.stage && this.stage.classList.contains('is-phone-open')) {
-            this.close();
-            return;
-        }
-        this.open();
-    },
+</div>
 
-    openApp(name) {
-        if (name !== 'info') this.returnApp = null;
-        this.activeApp = name;
-        this.open();
-    },
+<div class="screen" id="scrCoinPhase2" style="justify-content: center;">
+    <div class="brand-header coin-matrix-header" style="text-align: center; margin-bottom: 15px;">
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">SECRET SIDE</div>
+        <div class="brand-subtitle">Choose Heads or Tails, then pick your target</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+    <div id="coinMatrixSubjectControls" style="display:none; width:100%;">
+        <div class="pill-container">
+            <button class="matrix-pill red" onclick="Buttons.coinSide('heads')">
+                <div class="pill-title">HEADS </div>
+                <div class="pill-sub">RED</div>
+            </button>
+            <button class="matrix-pill blue" onclick="Buttons.coinSide('tails')">
+                <div class="pill-title">TAILS</div>
+                <div class="pill-sub">BLUE</div>
+            </button>
+        </div>
+    </div>
+    <div id="coinMatrixWaitNotice" class="sub-track" style="display:none; text-align:center; color: var(--neon-pink, #ff0055);">Waiting...</div>
+</div>
 
-    openSettings() {
-        if (!this.available) {
-            this.available = true;
-            const shutdown = document.getElementById('phoneShutdown');
-            if (shutdown) shutdown.hidden = true;
-        }
-        if (this.activeApp !== 'settings') this.returnApp = this.activeApp || 'controls';
-        this.activeApp = 'settings';
-        this.setView('settings');
-        this.open();
-    },
+<div class="screen" id="scrCoinStage">
+    <div class="lobby-header">
+        <div class="circle-btn" style="opacity:0;"></div>
+        <div class="brand-title" style="color:var(--neon-cyan, #00f0ff);">THE FLIP</div>
+        <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+    </div>
+    <div class="brand-subtitle" id="coinTapInstruction" style="text-align:center; margin-bottom: 10px;">THE COIN FLIPS AUTOMATICALLY</div>
+    <div class="coin-stage">
+        <div class="neon-coin" id="neonCoinElem">
+            <div class="coin-rim" id="coinRim" aria-hidden="true"></div>
+            <div class="coin-face coin-front">HEADS</div>
+            <div class="coin-face coin-back">TAILS</div>
+        </div>
+    </div>
+    <div class="coin-outcome-banner" id="coinOutcomeBanner" style="display:none;"></div>
+    <div class="prompt-box" id="coinRevealedQuestionCard" style="display:none; margin-top:15px;">...</div>
+    <button class="btn-main" id="coinNextRoundBtn" style="display:none; margin-top:auto;">Next Coin Round</button>
+</div>
 
-    openSlot(mode) {
-        this.slotMode = mode;
-        this.returnApp = null;
-        this.homeReturnApp = null;
-        this.activeApp = 'slots';
-        const rewardMode = mode === 'reward';
-        document.getElementById('phoneSlotKicker').textContent =
-            rewardMode ? 'CLASSIC MODE' : 'OPENSIGHT CASINO';
-        document.getElementById('phoneSlotTitle').textContent =
-            rewardMode ? 'Lucky Draw' : 'Slot Machine';
-        document.getElementById('phoneSlotCaption').textContent = rewardMode
-            ? 'Match three symbols to win a round reward.'
-            : 'Spin the reels and see what you get.';
-        const guide = document.getElementById('phoneSlotGuide');
-        guide.hidden = !rewardMode;
-        guide.open = false;
-        document.getElementById('casinoAppSkip').hidden = !rewardMode;
-        if (rewardMode) {
-            const botResults = document.getElementById('casinoAppBotResults');
-            botResults.hidden = true;
-            botResults.replaceChildren();
-        }
-        this.open();
-    },
+    <div class="screen active" id="scrMenu">
+        <div class="notebook-stage">
+            <div class="green-notebook is-rising is-intro" id="introNotebook">
+                <div class="notebook-open-page">
+                    <div class="notebook-inside-heading">OPEN SIGHT</div>
+                    <div class="notebook-inside-subtitle">Pick your seat</div>
+                    <button type="button" class="notebook-choice notebook-host" onclick="createLiveRoom()">Host a game</button>
+                    <button type="button" class="notebook-choice notebook-join" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrJoin')">Join a room</button>
+                    <button type="button" class="cover-leave-button" onclick="leaveNotebook()">LEAVE</button>
+                </div>
+                <div class="notebook-cover-face">
+                    <div class="notebook-cover-inside" aria-hidden="true"></div>
+                    <div class="notebook-cover-content">
+                        <div class="student-nameplate">
+                            <span class="student-nameplate-title">OpenSight</span>
+                            <span class="student-nameplate-caption">Student notebook</span>
+                            <label class="cover-name-label" for="menuNameInput">Your name</label>
+                            <input type="text" class="input-field" id="menuNameInput" placeholder="Your nickname" maxlength="12" oninput="Sound.draw()">
+                        </div>
+                        <button type="button" class="cover-open-button" onclick="openNotebook()">PLAY</button>
+                        <button type="button" class="cover-leave-button" onclick="leaveNotebook()">LEAVE</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    openLuckyDraw() {
-        this.openSlot('reward');
-    },
+    <div class="screen" id="scrJoin">
+        <div class="notebook-stage">
+            <div class="open-notebook-page join-notebook-page">
+                <div class="notebook-inside-heading">JOIN A ROOM</div>
+                <div class="notebook-inside-subtitle">Enter the code your host shared</div>
+                <input type="text" class="input-field room-code-input" id="joinRoomInput" placeholder="XXXX" maxlength="4" style="text-transform: uppercase;">
+                <div class="notebook-inline-error" id="joinRoomError" role="status" aria-live="polite"></div>
+                <button class="notebook-choice notebook-host" onclick="joinLiveRoom()">Connect to lobby</button>
+                <button class="notebook-choice notebook-join" onclick="window.Vibrate && window.Vibrate.click(); showScreen('scrMenu')">Back to cover</button>
+            </div>
+        </div>
+    </div>
 
-    openCasinoSlot() {
-        this.openSlot('casino');
-    },
+    <div class="screen" id="scrLobby">
+        <div class="lobby-notebook-page">
+        <div class="lobby-header">
+            <div class="lobby-brand">
+                <svg class="lobby-brand-eye" viewBox="0 0 32 24" aria-hidden="true">
+                    <path d="M2 12s5-8 14-8 14 8 14 8-5 8-14 8S2 12 2 12Z"></path>
+                    <circle cx="16" cy="12" r="4"></circle>
+                </svg>
+                <span>OpenSight</span><small>v1.0</small>
+            </div>
+        </div>
 
-    spinSlot() {
-        if (this.slotMode === 'reward' && window.Gambling) {
-            Gambling.requestSpin();
-        } else if (this.slotMode === 'casino' && window.CasinoSlot) {
-            CasinoSlot.spin();
-        }
-    },
+        <div class="room-section">
+            <div class="room-code-label">ROOM CODE</div>
+            <div class="room-code-row">
+                <div class="room-code-display" id="lobbyIdLabel">⌛</div>
+                <button type="button" class="btn-outline" id="copyRoomIdBtn" aria-label="Copy Room ID" title="Copy Room ID" onclick="copyRoomId(this)">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="copy-room-label">Copy</span>
+                </button>
+            </div>
+            <div class="lobby-meta" id="lobbyMetaLabel">0 / 10 players · 10 rounds</div>
+            <div class="lobby-status" id="lobbyStatusLabel">Waiting for connection...</div>
+        </div>
 
-    openCoinApp(phase) {
-        this.returnApp = null;
-        this.homeReturnApp = null;
-        this.activeApp = 'coin';
-        this.showCoinPhase(phase);
-        const isSubject = typeof net !== 'undefined' && net.myName === coinState.subject;
-        if (!isSubject && phase !== 'flip') {
-            this.homeReturnApp = 'coin';
-            this.activeApp = 'controls';
-            this.updateReturnToGame();
-            this.setView('controls');
-        } else {
-            this.homeReturnApp = null;
-            this.updateReturnToGame();
-        }
-        this.open();
-    },
+        <div class="lobby-scroll-area">
+        <div class="lobby-game-summary" id="lobbyReadOnlySettings" aria-label="Current game settings" hidden>
+            <div class="lobby-summary-card">
+                <span>Current mode</span>
+                <strong id="lobbyModeSummary">Classic</strong>
+                <small id="lobbyModeSummaryDescription"></small>
+            </div>
+            <div class="lobby-summary-card lobby-category-summary">
+                <span>Current category</span>
+                <strong id="lobbyCategorySummary">Party</strong>
+                <small id="lobbyCategorySummaryDescription"></small>
+            </div>
+        </div>
 
-    showCoinPhase(phase) {
-        this.activeApp = 'coin';
-        this.coinPhase = phase;
-        const panels = {
-            target: 'phoneCoinTargetPanel',
-            side: 'phoneCoinSidePanel',
-            flip: 'phoneCoinFlipPanel'
-        };
-        Object.values(panels).forEach(id => {
-            const panel = document.getElementById(id);
-            if (panel) panel.hidden = id !== panels[phase];
-        });
-        this.setView('coin');
-        this.open();
-    },
+        <div id="hostOnlyControls" style="display:none;">
+            <div class="lobby-dropdown-grid" id="lobbyDropdownControls">
+                <div class="lobby-dropdown-field">
+                    <div class="lobby-dropdown-label">
+                        <label for="lobbyModeSelect">MODE</label>
+                        <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('mode')" aria-label="Explain the selected mode">?</button>
+                    </div>
+                    <div class="lobby-custom-select">
+                        <select id="lobbyModeSelect" onchange="CoinMode.setGameMode(this.value)" tabindex="-1">
+                            <option value="classic">Classic</option>
+                            <option value="coin">Coin Mode</option>
+                            <option value="casino">Casino</option>
+                            <option value="openbox">Openbox</option>
+                        </select>
+                        <button type="button" class="lobby-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose mode">
+                            <span class="lobby-select-value"></span>
+                            <span class="lobby-select-chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="lobby-select-menu" role="listbox" hidden></div>
+                    </div>
+                    <p class="lobby-option-description" id="lobbyModeDescription"></p>
+                </div>
+                <div class="lobby-dropdown-field">
+                    <div class="lobby-dropdown-label">
+                        <label for="lobbyCategorySelect">CATEGORY</label>
+                        <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('category')" aria-label="Explain the selected category">?</button>
+                    </div>
+                    <div class="lobby-custom-select">
+                        <select id="lobbyCategorySelect" onchange="setLobbyCategory(this.value)" tabindex="-1"></select>
+                        <button type="button" class="lobby-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose category">
+                            <span class="lobby-select-value"></span>
+                            <span class="lobby-select-chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="lobby-select-menu" role="listbox" hidden></div>
+                    </div>
+                    <p class="lobby-option-description" id="lobbyCategoryDescription"></p>
+                </div>
+            </div>
+            <details class="lobby-settings-disclosure" id="lobbySettingsDetails">
+                <summary>More settings</summary>
+                <div class="lobby-settings-content">
+                    <div id="classicOnlyControls">
+                        <label class="game-setting-toggle" for="gamblingEnabledToggle">
+                            <span>
+                                <strong>Round slot rewards</strong>
+                                <small id="gamblingSettingStatus">Enabled for every round</small>
+                            </span>
+                            <input id="gamblingEnabledToggle" type="checkbox" checked onchange="Gambling.setEnabled(this.checked)">
+                            <span class="game-setting-switch" aria-hidden="true"></span>
+                        </label>
+                        <div class="openbox-timers" aria-label="Classic time limits">
+                            <label class="openbox-timer-control" for="classicWriteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Write time</span>
+                                    <output id="classicWriteValue" for="classicWriteSeconds">45 sec</output>
+                                </span>
+                                <input id="classicWriteSeconds" type="range" min="10" max="180" step="5" value="45" aria-label="Classic writing time in seconds" oninput="updateClassicTimerPreview()" onchange="setClassicTimer('write', this.value)">
+                            </label>
+                            <label class="openbox-timer-control" for="classicVoteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Vote time</span>
+                                    <output id="classicVoteValue" for="classicVoteSeconds">30 sec</output>
+                                </span>
+                                <input id="classicVoteSeconds" type="range" min="10" max="180" step="5" value="30" aria-label="Classic voting time in seconds" oninput="updateClassicTimerPreview()" onchange="setClassicTimer('vote', this.value)">
+                            </label>
+                        </div>
+                    </div>
+                    <div id="roundLimitControls">
+                        <div class="section-title">Game Length</div>
+                        <div class="round-grid">
+                            <div class="round-pill active" data-round-limit="10" id="roundPill10" onclick="setMaxRounds(10)"><div class="round-val">10</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="30" onclick="setMaxRounds(30)"><div class="round-val">30</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="45" onclick="setMaxRounds(45)"><div class="round-val">45</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill" data-round-limit="unlimited" onclick="setMaxRounds('unlimited')">
+                                <div class="round-val">
+                                    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="currentColor" width="24" height="24"><path d="M256,256s-48-96-126-96c-54.12,0-98,43-98,96s43.88,96,98,96c30,0,56.45-13.18,78-32" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-miterlimit:10;stroke-width:48px"></path><path d="M256,256s48,96,126,96c54.12,0,98-43,98-96s-43.88-96-98-96c-29.37,0-56.66,13.75-78,32" style="fill:none;stroke:currentColor;stroke-linecap:round;stroke-miterlimit:10;stroke-width:48px"></path></svg>
+                                </div>
+                                <div class="round-sub">Unlimited</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="coinRoundPicker" hidden>
+                        <div class="section-title">Coin Mode Length</div>
+                        <div class="round-grid coin-round-grid">
+                            <div class="round-pill btn-coin-round active" id="coinRoundPill10" onclick="CoinMode.setCoinMaxRounds(10, this)"><div class="round-val">10</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill btn-coin-round" id="coinRoundPill20" onclick="CoinMode.setCoinMaxRounds(20, this)"><div class="round-val">20</div><div class="round-sub">Rounds</div></div>
+                            <div class="round-pill btn-coin-round" id="coinRoundPill30" onclick="CoinMode.setCoinMaxRounds(30, this)"><div class="round-val">30</div><div class="round-sub">Rounds</div></div>
+                        </div>
+                    </div>
+                    <div id="openboxOnlyControls" class="openbox-lobby-controls" hidden>
+                        <div class="section-title">Openbox</div>
+                        <div class="openbox-mode-toggle" role="radiogroup" aria-label="Openbox round type">
+                            <label class="openbox-mode-option" for="openboxOpenAnswerToggle">
+                                <input id="openboxOpenAnswerToggle" type="radio" name="openboxType" value="openAnswer" checked onchange="Openbox.updateLobbyConfig()">
+                                <span>Open Answer</span>
+                            </label>
+                            <label class="openbox-mode-option" for="openboxTrueFalseToggle">
+                                <input id="openboxTrueFalseToggle" type="radio" name="openboxType" value="trueFalse" onchange="Openbox.updateLobbyConfig()">
+                                <span>True / False</span>
+                            </label>
+                        </div>
+                        <div class="openbox-timers" aria-label="Openbox time limits">
+                            <label class="openbox-timer-control" for="openboxSubmitSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Write / Answer</span>
+                                    <output id="openboxSubmitValue" for="openboxSubmitSeconds">60 sec</output>
+                                </span>
+                                <input id="openboxSubmitSeconds" type="range" min="10" max="180" step="5" value="60" aria-label="Write or answer time in seconds" oninput="Openbox.updateTimerPreview()" onchange="Openbox.updateLobbyConfig()">
+                            </label>
+                            <label class="openbox-timer-control" for="openboxVoteSeconds">
+                                <span class="openbox-timer-heading">
+                                    <span>Vote</span>
+                                    <output id="openboxVoteValue" for="openboxVoteSeconds">45 sec</output>
+                                </span>
+                                <input id="openboxVoteSeconds" type="range" min="10" max="180" step="5" value="45" aria-label="Vote time in seconds" oninput="Openbox.updateTimerPreview()" onchange="Openbox.updateLobbyConfig()">
+                            </label>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary lobby-test-bots" id="botAddBtn" onclick="addTestBots()" title="Add Test Bots" style="display:none;">Add test players</button>
+                </div>
+            </details>
+        </div>
 
-    close() {
-        const device = document.getElementById('phoneDevice');
-        if (!device || !this.stage) return;
-        device.classList.remove('is-open');
-        device.setAttribute('aria-hidden', 'true');
-        this.stage.classList.remove('is-phone-open');
-        this.renderCracks();
-        const resumeApp = this.homeReturnApp;
-        const canWake = this.subjectActive || this.activeApp === 'coin' ||
-            resumeApp === 'coin' || resumeApp === 'slots';
-        this.stage.classList.toggle('can-wake', canWake);
-        if (resumeApp && canWake) {
-            this.activeApp = resumeApp;
-            this.homeReturnApp = null;
-        } else if (!canWake) {
-            this.activeApp = null;
-            this.returnApp = null;
-            this.slotMode = null;
-            this.homeReturnApp = null;
-        }
-    },
+        <section class="lobby-roster" aria-labelledby="lobbyPlayersTitle">
+            <div class="lobby-roster-heading">
+                <div class="section-title" id="lobbyPlayersTitle">PLAYERS</div>
+            </div>
+            <div id="lobbyPlayerGrid"></div>
+        </section>
+        </div>
 
-    dismiss() {
-        if (this.activeApp === 'slots' && this.slotMode === 'reward' && window.Gambling) {
-            Gambling.skip();
-            return;
-        }
-        if (this.activeApp === 'slots' && this.slotMode === 'casino' && window.CasinoSlot) {
-            CasinoSlot.close();
-            return;
-        }
-        this.close();
-    },
+        <div class="lobby-footer">
+            <div class="lobby-footer-tools">
+            <button type="button" class="circle-btn lobby-settings-btn" id="lobbySettingsBtn" onclick="Phone.openSettings()" title="Settings" aria-label="Settings" hidden style="display:none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.6 1.6-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-2.3v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1-1.6-1.6.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H7v-2.3h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L10 7.1l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h2.3v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.6 1.6-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2V14h-.2a1.7 1.7 0 0 0-1.7 1z"></path></svg>
+            </button>
+            <button type="button" class="circle-btn lobby-phone-btn" onclick="Phone.openForLobby()" title="Pull out phone" aria-label="Pull out phone">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M10 18h4"></path></svg>
+            </button>
+            </div>
+            <div class="lobby-footer-center">
+            <button class="btn-main" id="hostStartBtn" style="display:none;" onclick="window.Vibrate && window.Vibrate.click(); broadcastStartRound()">START</button>
+            <p class="sub-track" id="clientWaitNotice" style="display:none;">WAITING FOR HOST...</p>
+            </div>
+            <div class="lobby-footer-actions">
+            <button type="button" class="circle-btn game-leave-button lobby-leave-btn" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </button>
+            </div>
+        </div>
+        </div>
+    </div>
 
-    stopEvents() {
-        this.subjectActive = false;
-        window.clearInterval(this.eventTimer);
-        window.clearTimeout(this.shutdownTimer);
-        this.eventTimer = null;
-        this.shutdownTimer = null;
-        if (this.stage) this.stage.classList.remove('can-wake');
-    },
+    <div class="screen blackjack-screen" id="scrBlackjack">
+        <div class="lobby-header blackjack-screen-header">
+            <div class="brand-title">BLACKJACK</div>
+            <button type="button" class="circle-btn blackjack-exit-btn" id="blackjackExitBtn"
+                aria-label="Exit Blackjack" title="Exit Blackjack" onclick="Buttons.blackjackExit()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m10 17 5-5-5-5"></path>
+                    <path d="M15 12H3"></path>
+                    <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path>
+                </svg>
+            </button>
+        </div>
+        <section class="blackjack-lobby" id="blackjackLobby" aria-labelledby="blackjackLobbyTitle">
+            <div class="blackjack-lobby-heading">
+                <h2 id="blackjackLobbyTitle">Table</h2>
+                <button type="button" class="blackjack-info-btn" aria-label="Blackjack rules"
+                title="Blackjack rules" onclick="Phone.showLobbyHelp('category', { mode: 'casino', category: 'blackjack' })">i</button>
+            </div>
+            <div id="blackjackStatus" class="blackjack-status"></div>
+            <div id="blackjackPlayers" class="blackjack-players"></div>
+            <div id="blackjackOwnHand" class="blackjack-card-row" hidden></div>
+            <div id="blackjackOwnScore" class="blackjack-own-score" hidden></div>
+            <div id="blackjackActions" class="blackjack-actions" hidden>
+                <button type="button" class="btn-main" onclick="Buttons.blackjackHit()">Hit</button>
+                <button type="button" class="btn-secondary" onclick="Buttons.blackjackStand()">Stand</button>
+            </div>
+            <div id="blackjackResults" class="blackjack-results" hidden></div>
+            <div class="blackjack-lobby-buttons">
+                <button type="button" class="btn-secondary" id="blackjackJoinBtn" onclick="Buttons.blackjackJoin()">Join Blackjack</button>
+                <button type="button" class="btn-secondary" id="blackjackBotBtn" hidden onclick="Buttons.blackjackAddBot()">Add Test Bot</button>
+                <button type="button" class="btn-main" id="blackjackStartBtn" hidden onclick="Buttons.blackjackStart()">Deal Cards</button>
+                <button type="button" class="btn-secondary" id="blackjackEndBtn" hidden onclick="Buttons.blackjackEnd()">End Hand</button>
+            </div>
+        </section>
+    </div>
 
-    startEvents() {
-        window.clearInterval(this.eventTimer);
-        if (this.homePresses >= 100) return;
-        this.eventTimer = window.setInterval(() => {
-            if (!this.subjectActive || !this.available || Math.random() > 0.12) return;
-            this.randomEvent();
-        }, 18000);
-    },
+    <div class="screen" id="scrSubjectLounge">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title">THE TARGET</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
+        <div class="brand-subtitle" style="text-align:center; margin-bottom: 12px;">Players are writing about you...</div>
+        <div class="prompt-box" id="subjectPromptBox">
+            <div class="prompt-text" id="subjectPromptLabel">...</div>
+        </div>
+        <div class="sub-track" id="submissionTrackLabel" style="display:none;">0 cards locked in...</div>
+        <div class="phone-stage" id="subjectPhoneStage">
+            <button type="button" class="phone-wake-tab" id="phoneWakeTab" onclick="Phone.wakeOrDismiss()" aria-label="Open your phone">PHONE</button>
+            <section class="phone-device" id="phoneDevice" aria-label="Simulated phone" aria-hidden="true">
+                <div class="phone-top-bezel" aria-hidden="true"><span class="phone-front-camera"></span><span class="phone-earpiece"></span></div>
+                <div class="phone-screen">
+                    <div class="phone-status-bar">
+                        <span id="phoneClock">9:41</span>
+                        <span class="phone-status-icons" id="phoneStatusIcons" aria-hidden="true">▮▮▮ ◉ ▰</span>
+                        <button type="button" class="phone-settings-launch" onclick="Phone.openSettings()" aria-label="Open phone settings" title="Settings">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.13.55-1.63.94l-2.39-.96a.5.5 0 0 0-.61.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.5.39 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="phone-close" onclick="Phone.dismiss()" aria-label="Put phone away">×</button>
+                    </div>
+                    <div class="phone-notification" id="phoneNotification" role="status" aria-live="polite"></div>
+                    <div class="phone-view phone-control-view" id="phoneControlView">
+                        <div class="phone-control-heading">
+                            <span>Control Center</span>
+                            <small>Phone controls</small>
+                        </div>
+                        <button type="button" class="phone-return-to-game" id="phoneReturnToGame" onclick="Phone.returnToGame()" hidden></button>
+                        <div class="phone-controls" aria-label="Primary phone controls">
+                            <button type="button" class="phone-control is-on" data-phone-control="wifi" aria-pressed="true">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2.5 8.5a15 15 0 0 1 19 0"></path><path d="M5.5 12a10.5 10.5 0 0 1 13 0"></path><path d="M8.8 15.5a5.5 5.5 0 0 1 6.4 0"></path><circle cx="12" cy="19.5" r="1" fill="currentColor" stroke="none"></circle></svg></span>
+                                <small>Wi-Fi</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="bluetooth" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 7 10 10-5 5V2l5 5L7 17"></path></svg></span>
+                                <small>Bluetooth</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="airplane" aria-label="Airplane mode" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"></path></svg></span>
+                                <small>Airplane</small>
+                            </button>
+                            <button type="button" class="phone-control" data-phone-control="flashlight" aria-pressed="false">
+                                <span class="phone-control-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 3h8l1 5H7l1-5Z"></path><path d="M7 8h10l-1.5 3.5V21h-7v-9.5L7 8Z"></path><path d="M10 14h4"></path></svg></span>
+                                <small>Flashlight</small>
+                            </button>
+                        </div>
+                        <div class="phone-utility-controls" aria-label="Additional phone controls">
+                            <button type="button" class="phone-control phone-control-secondary" data-phone-control="dnd" aria-label="Do Not Disturb" aria-pressed="false"><span aria-hidden="true">☾</span><small>DND</small></button>
+                            <button type="button" class="phone-control phone-control-secondary" data-phone-control="rotation" aria-label="Rotation Lock" aria-pressed="false"><span aria-hidden="true">↻</span><small>Rotation</small></button>
+                        </div>
+                        <div class="phone-sliders">
+                            <label class="phone-slider-row" for="phoneBrightness">
+                                <span aria-hidden="true">☼</span><input id="phoneBrightness" type="range" min="0" max="100" value="75" aria-label="Brightness"><small>Brightness</small>
+                            </label>
+                            <label class="phone-slider-row" for="phoneVolume">
+                                <span aria-hidden="true">♪</span><input id="phoneVolume" type="range" min="0" max="100" value="35" aria-label="Volume"><small>Volume</small>
+                            </label>
+                        </div>
+                        <button type="button" class="phone-info-button" onclick="Phone.showInfo()" aria-label="Show game information">
+                            <span class="phone-info-mark" aria-hidden="true">✦</span>
+                            <span>Need a hint?</span><small>OpenSight rules guide</small>
+                            <span class="phone-info-chevron" aria-hidden="true">›</span>
+                        </button>
+                        <div class="phone-shutdown" id="phoneShutdown" hidden>Battery died. Try existing without it.</div>
+                    </div>
+                    <div class="phone-view phone-settings-view" id="phoneSettingsView" hidden>
+                        <div class="phone-settings-heading">
+                            <div>
+                                <small>OPENSIGHT DEVICE</small>
+                                <h2>Settings</h2>
+                            </div>
+                            <button type="button" class="phone-settings-back" onclick="Phone.showControls()">Done</button>
+                        </div>
+                        <div class="phone-settings-content">
+                            <section class="settings-control">
+                                <div class="settings-control-heading">
+                                    <label for="gameVolumeSlider">Game volume</label>
+                                    <output id="gameVolumeValue" for="gameVolumeSlider">100%</output>
+                                </div>
+                                <input id="gameVolumeSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+                                <div class="settings-control-hint">Adjust game sound.</div>
+                            </section>
+                            <section class="settings-control">
+                                <div class="settings-control-heading">
+                                    <label for="vibrationSlider">Vibration</label>
+                                    <output id="vibrationValue" for="vibrationSlider">100%</output>
+                                </div>
+                                <input id="vibrationSlider" class="settings-slider" type="range" min="0" max="100" step="1" value="100">
+                                <div class="settings-control-hint" id="vibrationHint">Set to 0% to turn vibrations off.</div>
+                            </section>
+                            <div class="section-title">Theme</div>
+                            <div class="modal-actions phone-theme-options">
+                                <button type="button" class="btn-secondary theme-opt" data-theme-choice="light" onclick="osSetTheme('light')">Light</button>
+                                <button type="button" class="btn-secondary theme-opt" data-theme-choice="dark" onclick="osSetTheme('dark')">Dark</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phone-view phone-info-view" id="phoneInfoView" hidden>
+                        <header class="phone-gemini-header">
+                            <button type="button" class="phone-gemini-menu" onclick="Phone.showControls()" aria-label="Back to phone controls">☰</button>
+                            <div class="phone-gemini-model"><span>Gemini</span><small>AI</small><span aria-hidden="true">⌄</span></div>
+                            <button type="button" class="phone-gemini-compose" onclick="Phone.resetInfo()" aria-label="Start a new chat">✎</button>
+                            <span class="phone-gemini-avatar" id="phoneGeminiAvatar" aria-label="Player profile">P</span>
+                        </header>
+                        <div class="phone-chat-scroll">
+                            <div class="phone-gemini-welcome" id="phoneGeminiWelcome">
+                                <span class="phone-gemini-sparkle" aria-hidden="true">✦</span>
+                                <h2>Ready when you are</h2>
+                            </div>
+                            <div class="phone-gemini-response" id="phoneGeminiResponse" aria-live="polite" aria-atomic="false" hidden></div>
+                        </div>
+                        <div class="phone-suggestions" id="phoneSuggestions" aria-label="Suggested questions"></div>
+                        <form class="phone-input-row" onsubmit="event.preventDefault();Phone.askInfo()">
+                            <span class="phone-input-add" aria-hidden="true">+</span>
+                            <input id="phoneInfoInput" type="text" maxlength="180" placeholder="Ask Gemini" aria-label="Ask the rules guide">
+                            <span class="phone-input-mic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="13" rx="3"></rect><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M9 22h6"></path></svg></span>
+                            <button type="submit" aria-label="Send question">↑</button>
+                        </form>
+                    </div>
+                    <div class="phone-view phone-coin-view" id="phoneCoinView" hidden>
+                        <div class="phone-coin-panel" id="phoneCoinTargetPanel"></div>
+                        <div class="phone-coin-panel" id="phoneCoinSidePanel" hidden></div>
+                        <div class="phone-coin-panel" id="phoneCoinFlipPanel" hidden></div>
+                    </div>
+                    <div class="phone-view phone-slot-view" id="phoneSlotView" hidden>
+                        <header class="casino-app-header">
+                            <div><small id="phoneSlotKicker">OPENSIGHT CASINO</small><h2 id="phoneSlotTitle">Slot Machine</h2></div>
+                            <button type="button" class="casino-app-info" onclick="Phone.showLobbyHelp('category', { mode: 'casino', category: 'slots' })" aria-label="Slot machine rules">i</button>
+                            <button type="button" class="casino-app-close" onclick="Phone.dismiss()" aria-label="Put phone away">×</button>
+                        </header>
+                        <div class="casino-app-body">
+                            <p class="casino-app-caption" id="phoneSlotCaption">Spin the reels and see what you get.</p>
+                            <div class="casino-app-reels" id="casinoAppReels" aria-live="polite">
+                                <span>★</span><span>◆</span><span>♥</span>
+                            </div>
+                            <p class="casino-app-result" id="casinoAppResult" role="status">Ready when you are.</p>
+                            <button type="button" class="btn-main casino-app-spin" id="casinoAppSpin" onclick="Phone.spinSlot()">Spin once</button>
+                            <button type="button" class="btn-secondary gambling-skip-button phone-slot-skip" id="casinoAppSkip" onclick="Buttons.gamblingSkip()" hidden>Skip Lucky Draw</button>
+                            <details class="gambling-symbol-guide phone-slot-guide" id="phoneSlotGuide" hidden>
+                                <summary>Lucky Draw rewards</summary>
+                                <div class="gambling-legend" id="gamblingLegend"></div>
+                            </details>
+                            <div class="casino-app-bot-results" id="casinoAppBotResults" aria-live="polite" hidden></div>
+                        </div>
+                    </div>
+                    <svg class="phone-cracks" id="phoneCracks" viewBox="0 0 300 500" preserveAspectRatio="none" aria-hidden="true">
+                        <g class="crack-stage-1"><path d="M66 0 111 92 90 151 145 194 121 263 176 311"/><path d="m111 92 56-23 42 39"/></g>
+                        <g class="crack-stage-2"><path d="M0 204 91 151 126 164 160 123 206 108 229 66"/><path d="m160 123 20 48 52 38 68-14"/><path d="m121 263-42 45 14 67 56 26"/></g>
+                        <g class="crack-stage-3"><path d="m0 357 79-49 61 24 48-21 75 37 37-21"/><path d="m206 108 5 83-31 45 41 54 40 14"/><path d="m91 151-8-92L48 25"/></g>
+                        <g class="crack-stage-4"><path d="m0 61 48-2 37 32 26 1"/><path d="m0 431 66-39 74 7 28-29"/><path d="m214 0-5 49 37 17 54-19"/><path d="m239 500-10-72 47-49"/></g>
+                        <g class="crack-stage-5"><path d="m0 0 88 100 8 71 69 67-35 77 69 59-18 126"/><path d="m300 0-68 92-26 99 40 78-36 81 49 63-20 87"/><path d="m0 285 77 23 48-45 67 28 44-22 64 25"/><path d="m27 500 43-82-9-67 52-66 16-69-37-54"/><path d="m276 156-59-4-48 54-64-18-50 47-55-1"/><path d="m64 32 76 41 17 52 61-17"/></g>
+                    </svg>
+                </div>
+                <button type="button" class="phone-home-button" id="phoneHomeButton" onclick="Phone.home()" aria-label="Return to phone home"></button>
+            </section>
+        </div>
+    </div>
 
-    randomEvent() {
-        const events = [
-            () => {
-                const names = typeof room !== 'undefined' && Array.isArray(room.players)
-                    ? room.players.filter(name => name && name !== (typeof net !== 'undefined' ? net.myName : ''))
-                    : [];
-                const caller = names.length ? names[Math.floor(Math.random() * names.length)] : 'Unknown Number';
-                this.notify(`Incoming call: ${caller}. They have nothing important to say.`);
-            },
-            () => this.notify('Notification: You have 0 unread homework assignments. Suspicious.'),
-            () => this.glitch(),
-            () => this.notify('Control Center could not connect to your toaster.'),
-            () => this.freeze()
-        ];
-        events[Math.floor(Math.random() * events.length)]();
-    },
+    <div class="screen" id="scrGambling" aria-live="polite"></div>
 
-    pressControl(button) {
-        if (!this.available) return;
-        const control = button.dataset.phoneControl;
-        const names = {
-            wifi: 'Wi-Fi',
-            bluetooth: 'Bluetooth',
-            airplane: 'Airplane mode',
-            flashlight: 'Flashlight',
-            dnd: 'Do Not Disturb',
-            rotation: 'Rotation lock'
-        };
-        const name = names[control];
-        if (!name) return;
-        const enabled = button.getAttribute('aria-pressed') !== 'true';
-        button.setAttribute('aria-pressed', String(enabled));
-        button.classList.toggle('is-on', enabled);
+    <div class="screen" id="scrOpenbox">
+        <div class="openbox-page" id="openboxContent" aria-live="polite"></div>
+    </div>
 
-        const screen = document.querySelector('.phone-screen');
-        if (control === 'flashlight') screen.classList.toggle('is-flashlight', enabled);
-        if (control === 'airplane') {
-            this.airplaneMode = enabled;
-            this.updateStatusIcons();
-        }
-        if (control === 'dnd') this.doNotDisturb = enabled;
-        if (control === 'rotation') document.getElementById('phoneDevice').classList.toggle('is-rotation-locked', enabled);
+    <div class="screen" id="scrWriterInput">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title" id="writerCategoryLabel">PARTY</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
 
-        this.notify(`${name} ${enabled ? 'on' : 'off'}.`, true);
-        this.hapticFallback(45);
-    },
+        <div class="prompt-box">
+            <div class="prompt-text" id="activePromptLabel">...</div>
+        </div>
 
-    updateStatusIcons() {
-        const icons = document.getElementById('phoneStatusIcons');
-        if (icons) icons.textContent = this.airplaneMode ? '✈ ◉ ▰' : '▮▮▮ ◉ ▰';
-    },
+        <div class="timer-display">0:45</div>
 
-    adjustSlider(slider, name) {
-        if (!this.available) return;
-        const level = Number(slider.value) / 100;
-        const device = document.getElementById('phoneDevice');
-        if (name === 'brightness') {
-            this.applyBrightness(level);
-        } else if (typeof Sound !== 'undefined' && typeof Sound.setVolume === 'function') {
-            Sound.setVolume(level);
-        }
-        const vibrated = window.Vibrations && window.Vibrations.phoneSlider(level);
-        if (!vibrated) {
-            device.classList.remove('is-shaking');
-            void device.offsetWidth;
-            device.classList.add('is-shaking');
-            window.setTimeout(() => device.classList.remove('is-shaking'), 220);
-        }
-    },
+        <textarea class="card-textarea" id="writerInput" placeholder="Write your answer..." maxlength="500"></textarea>
+        <div class="char-count" id="charCount">0 / 120 words</div>
 
-    applyBrightness(level) {
-        const screen = document.querySelector('.phone-screen');
-        if (screen) screen.style.filter = `brightness(${0.7 + level * 0.75})`;
-    },
+        <button class="btn-main" id="lockInBtn" onclick="Buttons.submitWriterCard()">Lock In Card</button>
+        <button type="button" class="btn-secondary time-boost-button" id="useTimeBoostBtn" onclick="Buttons.useTimeBoost()" hidden></button>
+    </div>
 
-    hapticFallback(duration) {
-        if (window.Vibrations && window.Vibrations.isSupported()) {
-            window.Vibrations.phoneSlider(0.35);
-            return;
-        }
-        const device = document.getElementById('phoneDevice');
-        device.classList.remove('is-shaking');
-        void device.offsetWidth;
-        device.classList.add('is-shaking');
-        window.setTimeout(() => device.classList.remove('is-shaking'), duration + 100);
-    },
+    <div class="screen" id="scrRevealStage">
+        <div class="lobby-header">
+            <div class="circle-btn" style="opacity: 0;"></div>
+            <div class="brand-title">THE REVEAL</div>
+            <button type="button" class="circle-btn game-leave-button" onclick="triggerLeaveConfirmation()" title="Leave game" aria-label="Leave game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+        </div>
 
-    getHelpContext(overrides = {}) {
-        const modeSelect = document.getElementById('lobbyModeSelect');
-        const categorySelect = document.getElementById('lobbyCategorySelect');
-        const lobby = document.getElementById('scrLobby');
-        const lobbyIsActive = lobby && lobby.classList.contains('active');
-        const gameRoom = typeof room !== 'undefined' ? room : null;
-        const mode = overrides.mode || (lobbyIsActive && modeSelect
-            ? modeSelect.value
-            : gameRoom && gameRoom.gameMode) || 'classic';
-        const roomCategory = !gameRoom ? 'classic'
-            : mode === 'coin' ? gameRoom.coinCategory
-                : mode === 'casino' ? gameRoom.casinoCategory
-                    : mode === 'openbox' && gameRoom.openboxConfig
-                        ? gameRoom.openboxConfig.category
-                        : gameRoom.currentCategory;
-        const categoryValues = {
-            classic: ['classic', 'trouble', 'spicy', 'deep', 'flirt', 'trash', 'nsfw', 'misc'],
-            coin: ['Party', 'Spicy', 'Deep'],
-            casino: ['slots', 'blackjack'],
-            openbox: ['classic', 'spicy', 'deep', 'nsfw']
-        };
-        const lobbyCategory = lobbyIsActive && categorySelect &&
-            categoryValues[mode] && categoryValues[mode].includes(categorySelect.value)
-            ? categorySelect.value
-            : roomCategory;
-        const category = overrides.category || lobbyCategory || 'classic';
-        const modeNames = { classic: 'Classic', coin: 'Coin Mode', casino: 'Casino', openbox: 'Openbox' };
-        const categoryNames = {
-            classic: {
-                classic: 'Party', trouble: 'Trouble', spicy: 'Spicy', deep: 'Deep',
-                flirt: 'Flirt', trash: 'Trash', nsfw: 'NSFW', misc: 'Mixed'
-            },
-            coin: { Party: 'Party', Spicy: 'Spicy', Deep: 'Deep' },
-            casino: { slots: 'Slot Machine', blackjack: 'Blackjack' },
-            openbox: { classic: 'Classic', spicy: 'Spicy', deep: 'Deep', nsfw: 'NSFW (18+)' }
-        };
-        return Object.assign({
-            mode,
-            category,
-            modeName: modeNames[mode] || 'Classic',
-            categoryName: (categoryNames[mode] && categoryNames[mode][category]) || category || 'Party'
-        }, overrides);
-    },
+        <div class="prompt-box">
+            <div class="prompt-text" id="revealPromptLabel">...</div>
+        </div>
 
-    showLobbyHelp(kind, overrides = {}) {
-        const context = this.getHelpContext(overrides);
-        context.kind = kind;
-        this.showInfo(context);
-    },
+        <p class="brand-subtitle" id="revealInstructions" style="text-align:center;">Tap DRAW to advance or READ to go back.</p>
 
-    showInfo(context) {
-        if (!this.available) return;
-        const resolved = context && context.modeName ? context : this.getHelpContext(context || {});
-        this.returnApp = this.activeApp === 'info' ? this.returnApp : this.activeApp;
-        const modeRules = {
-            classic: 'Everyone except the current subject writes an answer to the prompt. The subject reveals the cards and picks a favorite; the room can vote when that option is enabled.',
-            coin: 'The subject secretly chooses Heads or Tails, then picks a target. The coin starts flipping automatically on every phone as soon as the target is picked; a matching side protects the answer, while the other side reveals it.',
-            casino: resolved.category === 'blackjack'
-                ? 'Join the table, receive two cards, then hit or stand. The closest hand to 21 wins; going over 21 busts.'
-                : 'Open the Slot Machine app on this phone and spin as many times as you like. Matching symbols are a jackpot. No bot or second player is needed.',
-            openbox: 'True/False: one subject writes a question or statement and marks its truth; correct predictions and each player fooled earn 1 point. Open Answer: correct predictions earn 1 point, and an answer author earns 1 for each other player who chooses their answer. Reveals show who voted for each answer.'
-        };
-        const categoryRules = {
-            classic: {
-                classic: 'Party prompts are light, quick questions designed for funny answers.',
-                trouble: 'Trouble prompts invite mischievous answers. Keep them playful and respect the room.',
-                spicy: 'Spicy prompts are more daring. Skip anything that makes you uncomfortable.',
-                deep: 'Deep prompts are reflective. Share only what you are comfortable sharing.',
-                flirt: 'Flirt prompts are playful. Keep it consensual and comfortable for everyone.',
-                trash: 'Trash prompts are silly, chaotic, and intentionally low-stakes.',
-                nsfw: 'NSFW prompts are intended for adults only. Make sure everyone in the room is comfortable.',
-                misc: 'Mixed draws from a variety of prompt styles.'
-            },
-            coin: {
-                Party: 'Party Coin prompts are light scenarios. Pick a target, choose a side, then flip.',
-                Spicy: 'Spicy Coin prompts are more daring. Pick a target and side, and skip anything uncomfortable.',
-                Deep: 'Deep Coin prompts are reflective. Choose what you are comfortable sharing before the flip.'
-            },
-            casino: {
-                slots: 'Spin as many times as you like. Three matching symbols make a jackpot.',
-                blackjack: 'Blackjack is a shared table: join, then compete for the best hand without going over 21.'
-            },
-            openbox: {
-                classic: 'Light bluffing prompts for the whole room.',
-                spicy: 'Playful, bolder prompts; skip anything uncomfortable.',
-                deep: 'Reflective prompts; share only what you choose.',
-                nsfw: 'Adults-only, more explicit prompts. Keep consent and boundaries clear.'
-            }
-        };
-        const modeAnswer = modeRules[resolved.mode] || modeRules.classic;
-        const categoryAnswer = (categoryRules[resolved.mode] && categoryRules[resolved.mode][resolved.category])
-            || modeAnswer;
-        const kind = resolved.kind || 'overview';
-        const answer = kind === 'mode'
-            ? modeAnswer
-            : kind === 'category'
-                ? `${resolved.categoryName} in ${resolved.modeName}: ${categoryAnswer}`
-                : `${resolved.modeName}: ${modeAnswer}\n\n${resolved.categoryName}: ${categoryAnswer}`;
-        const openingQuestion = kind === 'mode'
-            ? `Explain ${resolved.modeName}`
-            : kind === 'category'
-                ? `Explain ${resolved.categoryName} in ${resolved.modeName}`
-                : `Quick guide to ${resolved.modeName}`;
+        <div id="cardsWrapper"></div>
 
-        this.infoContext = {
-            ...resolved,
-            kind,
-            answer,
-            modeRules: modeAnswer,
-            categoryRules: categoryAnswer
-        };
-        this.selectedSuggestion = '';
-        this.infoHistory = [];
-        document.getElementById('phoneGeminiWelcome').hidden = false;
-        document.getElementById('phoneGeminiResponse').hidden = true;
-        document.getElementById('phoneGeminiResponse').replaceChildren();
-        this.setGeminiProfile();
-        this.renderSuggestions();
-        const input = document.getElementById('phoneInfoInput');
-        if (input) input.value = '';
-        this.openApp('info');
-        this.addInfoTurn(openingQuestion, answer);
-    },
+        <button class="btn-main" id="nextRoundBtn" style="display:none; margin-top:20px;">Next Round</button>
+        <button class="btn-secondary" id="returnLobbyBtn" style="display:none; margin-top:10px;">Return to Lobby</button>
+    </div>
 
-    renderSuggestions() {
-        const context = this.infoContext || this.getHelpContext();
-        const label = context.kind === 'mode' ? context.modeName : context.categoryName;
-        const suggestions = [
-            { icon: '✧', text: `How do I play ${label}?` },
-            { icon: '♙', text: `What happens in ${context.modeName}?` },
-            { icon: '♧', text: `Explain the ${context.categoryName} rules` }
-        ];
-        const container = document.getElementById('phoneSuggestions');
-        if (!container) return;
-        container.replaceChildren(...suggestions.map(({ icon, text }) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'phone-suggestion';
-            const mark = document.createElement('span');
-            mark.className = 'phone-suggestion-mark';
-            mark.setAttribute('aria-hidden', 'true');
-            mark.textContent = icon;
-            const label = document.createElement('span');
-            label.textContent = text;
-            button.dataset.prompt = text;
-            button.setAttribute('aria-pressed', String(text === this.selectedSuggestion));
-            if (text === this.selectedSuggestion) button.classList.add('is-selected');
-            button.append(mark, label);
-            button.addEventListener('click', () => this.selectSuggestion(text));
-            return button;
-        }));
-    },
+</div>
 
-    addInfoTurn(question, answer) {
-        this.infoHistory.push({ question, answer });
-        const response = document.getElementById('phoneGeminiResponse');
-        if (!response) return;
-        const turn = document.createElement('div');
-        turn.className = 'phone-chat-turn';
-        const questionElement = document.createElement('p');
-        questionElement.className = 'phone-chat-question';
-        questionElement.textContent = question;
-        const answerElement = document.createElement('div');
-        answerElement.className = 'phone-chat-answer';
-        answerElement.textContent = answer;
-        turn.append(questionElement, answerElement);
-        response.appendChild(turn);
-        response.hidden = false;
-        document.getElementById('phoneGeminiWelcome').hidden = true;
-        const chat = document.querySelector('.phone-chat-scroll');
-        if (chat) chat.scrollTop = chat.scrollHeight;
-    },
+<script src="vibrations.js?v=20261116-phone-controls"></script>
+<script src="networking.js?v=20261115-notebook-page-flow"></script>
+<script src="cards.js?v=20261119-independent-piles2"></script>
+<script src="bots.js?v=20261117-coin-openbox"></script>
+<script src="buttons.js?v=20261115-casino-lobby"></script>
+<script src="coinMode.js?v=20261118-coin-target-toast1"></script>
+<script src="players.js?v=20261118-classic-timers"></script>
+<script src="openbox.js?v=20261117-coin-openbox"></script>
+<script src="blackjack.js?v=20261116-shared-bots"></script>
+<script src="gambling.js?v=20261116-casino-unlimited"></script>
+<script src="phone.js?v=20261117-coin-3d-flow2"></script>
+<script src="game.js?v=20261119-multi-subject1"></script>
 
-    updateSuggestionSelection() {
-        const container = document.getElementById('phoneSuggestions');
-        if (!container) return;
-        container.querySelectorAll('.phone-suggestion').forEach(button => {
-            const selected = button.dataset.prompt === this.selectedSuggestion;
-            button.classList.toggle('is-selected', selected);
-            button.setAttribute('aria-pressed', String(selected));
-        });
-    },
-
-    setGeminiProfile() {
-        const avatar = document.getElementById('phoneGeminiAvatar');
-        if (!avatar) return;
-        const nameInput = document.getElementById('menuNameInput');
-        const name = (typeof net !== 'undefined' && net.myName) ||
-            (nameInput && nameInput.value.trim()) || 'Player';
-        const colors = ['#d52f72', '#536fe1', '#e27a36', '#238c7b', '#8b5dc4', '#b24d45'];
-        if (!this.profileColor) {
-            this.profileColor = colors[Math.floor(Math.random() * colors.length)];
-        }
-        avatar.textContent = name.trim().charAt(0).toUpperCase() || 'P';
-        avatar.style.setProperty('--profile-color', this.profileColor);
-        avatar.setAttribute('aria-label', `${name}'s profile`);
-    },
-
-    selectSuggestion(phrase) {
-        const input = document.getElementById('phoneInfoInput');
-        if (!input) return;
-        this.selectedSuggestion = phrase;
-        this.updateSuggestionSelection();
-        input.value = phrase;
-        this.askInfo();
-    },
-
-    askInfo() {
-        const input = document.getElementById('phoneInfoInput');
-        const question = input ? input.value.trim() : '';
-        if (!question) return;
-        if (question !== this.selectedSuggestion) {
-            this.selectedSuggestion = '';
-            this.updateSuggestionSelection();
-        }
-        const context = this.infoContext || this.getHelpContext();
-        this.addInfoTurn(question, this.answerInfoQuestion(question, context));
-        if (input) input.value = '';
-    },
-
-    answerInfoQuestion(question, context) {
-        const lower = question.toLowerCase();
-        const modeAnswer = context.modeRules || context.answer;
-        const categoryAnswer = context.categoryRules || context.answer;
-
-        if (/\bbots?\b/.test(lower)) {
-            return context.mode === 'casino' && context.category === 'slots'
-                ? 'Slots are a solo activity, so bots are optional. If room bots are present, they spin automatically alongside you.'
-                : 'Room bots can write and vote in Classic, take turns in Coin Mode, and join Blackjack automatically.';
-        }
-        if (context.mode === 'coin' && /\b(coin|heads?|tails?|flip|target)\b/.test(lower)) {
-            return 'The subject secretly chooses Heads or Tails, then picks a target. The coin starts flipping automatically on every phone as soon as the target is picked: the matching side protects the answer, and the other side reveals it.';
-        }
-        if (context.mode === 'casino' && context.category === 'blackjack' &&
-            /\b(blackjack|hit|stand|hand|21|deal)\b/.test(lower)) {
-            return 'Join the table and receive two cards. On your turn, Hit to draw or Stand to keep your hand; the closest total to 21 wins without going over.';
-        }
-        if (context.mode === 'casino' && context.category === 'slots' &&
-            /\b(slot|spin|reel|jackpot|symbol)\b/.test(lower)) {
-            return 'Open the Slot Machine app on the phone and spin as often as you like. Three matching symbols make a jackpot.';
-        }
-        if (/\b(score|scoring|points?|win|winner)\b/.test(lower)) {
-            if (context.mode === 'openbox') {
-                return 'Openbox awards 1 point per scoring event: correct predictions score 1, True/False subjects earn 1 per player fooled, and Open Answer authors earn 1 per other player who chooses their answer. Totals carry across rounds; reveals show who voted for each answer.';
-            }
-            if (context.mode === 'casino' && context.category === 'blackjack') {
-                return 'The winner is the player whose hand is closest to 21 without going over.';
-            }
-            if (context.mode === 'casino' && context.category === 'slots') {
-                return 'Three matching slot symbols make a jackpot.';
-            }
-            return `${modeAnswer} Follow the on-screen result to see who won the round.`;
-        }
-        const categoryLabel = String(context.categoryName || '').toLowerCase();
-        if (/\b(category|tone|style)\b/.test(lower) || (categoryLabel && lower.includes(categoryLabel))) {
-            return `${context.categoryName} in ${context.modeName}: ${categoryAnswer}`;
-        }
-        if (/\b(next|after|turn|round|phase)\b/.test(lower)) {
-            if (context.mode === 'coin') {
-                return 'The subject chooses a secret side first, then picks a target. The coin starts flipping automatically on every phone as soon as the target is picked.';
-            }
-            if (context.mode === 'casino' && context.category === 'blackjack') {
-                return 'Join the table; when it is your turn, use Hit or Stand. The table lead deals the next hand.';
-            }
-            return modeAnswer;
-        }
-        if (/\b(subject|vote|voting|write|answer|prompt)\b/.test(lower)) {
-            return modeAnswer;
-        }
-        if (/\b(mode|play|rules|happens)\b/.test(lower)) {
-            return `${context.modeName}: ${modeAnswer}`;
-        }
-        return `${context.categoryName} in ${context.modeName}: ${categoryAnswer} I can also explain turns, scoring, or bots.`;
-    },
-
-    resetInfo() {
-        this.showInfo(this.infoContext || this.getHelpContext());
-    },
-
-    showControls() {
-        if (!this.available) return;
-        const returnApp = this.returnApp;
-        this.returnApp = null;
-        if (returnApp === 'coin') {
-            this.showCoinPhase(this.coinPhase);
-            return;
-        }
-        if (returnApp === 'info') {
-            this.activeApp = 'info';
-            this.setView('info');
-            this.open();
-            return;
-        }
-        this.activeApp = returnApp === 'slots' && (
-            this.slotMode === 'reward' ||
-            (window.CasinoSlot && CasinoSlot.active)
-        )
-            ? 'slots'
-            : 'controls';
-        this.setView(this.activeApp);
-        this.open();
-    },
-
-    home() {
-        if (!this.available || this.homePresses >= 100) return;
-        this.homePresses += 1;
-        this.crackPresses = this.homePresses === 100 ? 100 : this.crackPresses + 1;
-        this.renderCracks();
-        this.hapticFallback(35);
-        if (this.homePresses === 100) {
-            window.clearInterval(this.eventTimer);
-            window.clearTimeout(this.shutdownTimer);
-            this.eventTimer = null;
-            this.shutdownTimer = null;
-            this.notify('Screen fully cracked. Still somehow scrolling.');
-        }
-        if (this.activeApp !== 'controls') {
-            const app = this.activeApp === 'info' ? this.returnApp : this.activeApp;
-            this.homeReturnApp = app === 'coin' || app === 'slots' ? app : null;
-            this.returnApp = null;
-            this.activeApp = 'controls';
-            this.updateReturnToGame();
-            this.setView('controls');
-            this.open();
-        }
-    },
-
-    updateReturnToGame() {
-        const button = document.getElementById('phoneReturnToGame');
-        if (!button) return;
-        const labels = { coin: 'Return to Coin Mode', slots: 'Return to Slot Machine' };
-        button.hidden = !labels[this.homeReturnApp];
-        button.textContent = labels[this.homeReturnApp] || '';
-    },
-
-    returnToGame() {
-        const app = this.homeReturnApp;
-        if (app !== 'coin' && app !== 'slots') return;
-        this.homeReturnApp = null;
-        this.returnApp = null;
-        this.activeApp = app;
-        this.updateReturnToGame();
-        if (app === 'coin') this.showCoinPhase(this.coinPhase);
-        else this.open();
-    },
-
-    renderCracks() {
-        const cracks = document.getElementById('phoneCracks');
-        if (!cracks) return;
-        const stage = Math.min(5, Math.floor(this.crackPresses / 20));
-        cracks.dataset.crackStage = String(stage);
-        const isBroken = this.homePresses >= 100;
-        const device = document.getElementById('phoneDevice');
-        if (device) device.classList.toggle('is-shattered', isBroken);
-        if (this.stage) this.stage.classList.toggle('is-broken', isBroken);
-        const screen = document.querySelector('.phone-screen');
-        if (screen) {
-            screen.classList.toggle('is-cracked', this.crackPresses > 0);
-            screen.classList.toggle('is-broken', isBroken);
-            screen.inert = isBroken;
-            if (isBroken) screen.setAttribute('aria-disabled', 'true');
-            else screen.removeAttribute('aria-disabled');
-        }
-        const button = document.getElementById('phoneHomeButton');
-        if (button) button.disabled = isBroken;
-        const wakeTab = document.getElementById('phoneWakeTab');
-        if (wakeTab) {
-            const isOpen = this.stage && this.stage.classList.contains('is-phone-open');
-            wakeTab.textContent = isBroken && isOpen ? 'PUT AWAY' : 'PHONE';
-            wakeTab.setAttribute('aria-label',
-                isBroken && isOpen ? 'Put broken phone away' : 'Open your phone');
-        }
-    },
-
-    notify(message, force) {
-        if (this.doNotDisturb && !force) return;
-        const notification = document.getElementById('phoneNotification');
-        if (!notification) return;
-        notification.textContent = message;
-        notification.classList.add('is-visible');
-        window.clearTimeout(this.notificationTimer);
-        this.notificationTimer = window.setTimeout(() => notification.classList.remove('is-visible'), 3000);
-    },
-
-    glitch() {
-        const screen = document.querySelector('.phone-screen');
-        screen.classList.add('phone-glitch');
-        this.notify('Screen glitch. Your imaginary warranty has expired.');
-        window.setTimeout(() => screen.classList.remove('phone-glitch'), 600);
-    },
-
-    freeze() {
-        const screen = document.querySelector('.phone-screen');
-        screen.classList.add('phone-frozen');
-        this.notify('Screen frozen. Please wait while it remembers how to be a phone.');
-        window.setTimeout(() => screen.classList.remove('phone-frozen'), 900);
-    },
-
-    shutdown() {
-        this.available = false;
-        this.close();
-        document.getElementById('phoneShutdown').hidden = false;
-        document.getElementById('phoneDevice').classList.add('is-open');
-        document.getElementById('phoneDevice').setAttribute('aria-hidden', 'false');
-        this.stage.classList.add('is-phone-open');
-    }
+<script>
+var introNotebook=document.getElementById('introNotebook');
+if(introNotebook){
+  introNotebook.addEventListener('animationend',function(event){
+    if(event.animationName==='notebookRise')introNotebook.classList.remove('is-intro');
+  });
+}
+window.openNotebook=function(){
+  var notebook=document.getElementById('introNotebook');
+  if(!notebook||notebook.classList.contains('is-opening')||notebook.classList.contains('is-opening-pending'))return;
+  window.Vibrate&&window.Vibrate.click&&window.Vibrate.click();
+  Sound.draw();
+  var cover=notebook.querySelector('.notebook-cover-face');
+  if(cover){cover.inert=true;cover.setAttribute('aria-hidden','true');}
+  notebook.classList.remove('is-rising');
+  notebook.classList.add('is-opening-pending');
+  window.requestAnimationFrame(function(){
+    notebook.classList.remove('is-opening-pending');
+    if(!notebook.isConnected||!document.getElementById('scrMenu').classList.contains('active'))return;
+    notebook.classList.add('is-opening');
+    notebook.openTimer=window.setTimeout(function(){
+      notebook.openTimer=null;
+      if(notebook.classList.contains('is-opening'))notebook.classList.add('is-zooming');
+    },window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:620);
+  });
 };
-
-window.Phone = Phone;
-window.leaveNotebook = () => {
-    window.close();
-    window.setTimeout(() => {
-        if (!window.closed) window.alert('Your browser will not let this page close itself. Close the tab to leave.');
-    }, 250);
-};
-Phone.init();
+(function(){
+  var root=document.documentElement;
+  function paint(t){
+    root.dataset.theme=t;
+    var m=document.querySelector('meta[name="theme-color"]'); if(m) m.content=t==='dark'?'#111d26':'#f5f7f6';
+    document.querySelectorAll('.theme-opt').forEach(function(b){b.classList.toggle('active',b.dataset.themeChoice===t);});
+  }
+  window.osSetTheme=function(t){
+    t=t==='dark'?'dark':'light';
+    var changed=root.dataset.theme!==t;
+    try{localStorage.setItem('opensight-theme',t);}catch(e){}
+    paint(t); window.Vibrate && window.Vibrate.click && window.Vibrate.click();
+    if(changed && typeof Sound !== 'undefined' && Sound.draw) Sound.draw();
+  };
+  function readSetting(key,fallback){
+    try{
+      var stored=localStorage.getItem(key);
+      if(stored===null||stored.trim()==='')return fallback;
+      var value=Number(stored);
+      return Number.isFinite(value)?Math.max(0,Math.min(100,value)):fallback;
+    }catch(e){return fallback;}
+  }
+  function saveSetting(key,value){
+    try{localStorage.setItem(key,String(value));}catch(e){}
+  }
+  var volumeSlider=document.getElementById('gameVolumeSlider');
+  var volumeValue=document.getElementById('gameVolumeValue');
+  var vibrationSlider=document.getElementById('vibrationSlider');
+  var vibrationValue=document.getElementById('vibrationValue');
+  var vibrationHint=document.getElementById('vibrationHint');
+  var savedVolume=readSetting('opensight-game-volume',100);
+  var savedVibration=readSetting('opensight-vibration-strength',100);
+  volumeSlider.value=String(savedVolume);
+  vibrationSlider.value=String(savedVibration);
+  Sound.setVolume(savedVolume/100);
+  window.Vibrations.setIntensity(savedVibration/100);
+  volumeValue.value=savedVolume+'%';
+  volumeValue.textContent=savedVolume+'%';
+  vibrationValue.value=savedVibration+'%';
+  vibrationValue.textContent=savedVibration+'%';
+  if(!window.Vibrations.isSupported()){
+    vibrationSlider.disabled=true;
+    vibrationHint.textContent='Vibration is not supported on this device.';
+  }
+  volumeSlider.addEventListener('input',function(){
+    var value=Number(volumeSlider.value);
+    Sound.setVolume(value/100);
+    volumeValue.value=value+'%';
+    volumeValue.textContent=value+'%';
+    saveSetting('opensight-game-volume',value);
+  });
+  vibrationSlider.addEventListener('input',function(){
+    var value=Number(vibrationSlider.value);
+    window.Vibrations.setIntensity(value/100);
+    window.Vibrations.preview();
+    vibrationValue.value=value+'%';
+    vibrationValue.textContent=value+'%';
+    vibrationHint.textContent=value===0?'Vibrations are off.':'Set to 0% to turn vibrations off.';
+    saveSetting('opensight-vibration-strength',value);
+  });
+  paint(root.dataset.theme||'light');
+})();
+</script>
+</body>
+</html>
