@@ -27,7 +27,25 @@
     <link rel="stylesheet" href="gambling.css?v=20261115-phone-slot-final3">
     <link rel="stylesheet" href="phone.css?v=20261118-ui-polish4">
     <link rel="stylesheet" href="openbox.css?v=20261118-ui-polish2">
-    <link rel="stylesheet" href="design-system.css?v=20261119-cover-flip5">
+    <link rel="stylesheet" href="design-system.css?v=20261119-lobby-dropdown1">
+    <style id="lobby-dropdown-inline">
+        /* Lobby dropdowns: hides the native <select> (it opens the phone's own picker)
+           so the custom menu from players.js is used. Kept inline so it works even
+           if design-system.css is cached or not updated. */
+        #scrLobby .lobby-dropdown-field .lobby-custom-select > select {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            min-height: 0;
+            margin: -1px;
+            padding: 0;
+            overflow: hidden;
+            border: 0;
+            clip: rect(0 0 0 0);
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
 </head>
 
 <body class="cover-scene">
@@ -236,12 +254,19 @@
                         <label for="lobbyModeSelect">MODE</label>
                         <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('mode')" aria-label="Explain the selected mode">?</button>
                     </div>
-                    <select id="lobbyModeSelect" onchange="CoinMode.setGameMode(this.value)">
-                        <option value="classic">Classic</option>
-                        <option value="coin">Coin Mode</option>
-                        <option value="casino">Casino</option>
-                        <option value="openbox">Openbox</option>
-                    </select>
+                    <div class="lobby-custom-select">
+                        <select id="lobbyModeSelect" onchange="CoinMode.setGameMode(this.value)" tabindex="-1">
+                            <option value="classic">Classic</option>
+                            <option value="coin">Coin Mode</option>
+                            <option value="casino">Casino</option>
+                            <option value="openbox">Openbox</option>
+                        </select>
+                        <button type="button" class="lobby-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose mode">
+                            <span class="lobby-select-value"></span>
+                            <span class="lobby-select-chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="lobby-select-menu" role="listbox" hidden></div>
+                    </div>
                     <p class="lobby-option-description" id="lobbyModeDescription"></p>
                 </div>
                 <div class="lobby-dropdown-field">
@@ -249,7 +274,14 @@
                         <label for="lobbyCategorySelect">CATEGORY</label>
                         <button type="button" class="lobby-help-button" onclick="Phone.showLobbyHelp('category')" aria-label="Explain the selected category">?</button>
                     </div>
-                    <select id="lobbyCategorySelect" onchange="setLobbyCategory(this.value)"></select>
+                    <div class="lobby-custom-select">
+                        <select id="lobbyCategorySelect" onchange="setLobbyCategory(this.value)" tabindex="-1"></select>
+                        <button type="button" class="lobby-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose category">
+                            <span class="lobby-select-value"></span>
+                            <span class="lobby-select-chevron" aria-hidden="true"></span>
+                        </button>
+                        <div class="lobby-select-menu" role="listbox" hidden></div>
+                    </div>
                     <p class="lobby-option-description" id="lobbyCategoryDescription"></p>
                 </div>
             </div>
@@ -625,7 +657,7 @@
 <script src="blackjack.js?v=20261116-shared-bots"></script>
 <script src="gambling.js?v=20261116-casino-unlimited"></script>
 <script src="phone.js?v=20261117-coin-3d-flow2"></script>
-<script src="game.js?v=20261119-cycle-layout1"></script>
+<script src="game.js?v=20261119-multi-subject2"></script>
 
 <script>
 var introNotebook=document.getElementById('introNotebook');
